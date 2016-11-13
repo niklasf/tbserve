@@ -182,17 +182,20 @@ void get_api(struct evhttp_request *req, void *context) {
 
   struct evkeyvalq query;
   const char *jsonp = nullptr;
-  const char *fen = nullptr;
+  const char *c_fen = nullptr;
   if (0 == evhttp_parse_query(uri, &query)) {
-      fen = evhttp_find_header(&query, "fen");
+      c_fen = evhttp_find_header(&query, "fen");
       jsonp = evhttp_find_header(&query, "callback");
   }
-  if (!fen || !strlen(fen)) {
+  if (!c_fen || !strlen(c_fen)) {
       evhttp_send_error(req, HTTP_BADREQUEST, "Missing FEN");
       return;
   }
 
-  if (!validate_fen(fen)) {
+  std::string fen(c_fen);
+  std::replace(fen.begin(), fen.end(), '_', ' ');
+
+  if (!validate_fen(fen.c_str())) {
       evhttp_send_error(req, HTTP_BADREQUEST, "Invalid FEN");
       return;
   }
