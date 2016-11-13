@@ -419,5 +419,10 @@ int main(int argc, char* argv[]) {
   Threads.init();
   Tablebases::init(syzygy_path);
 
-  return serve(5001);
+  if (Tablebases::MaxCardinality < 3) {
+    std::cout << "at least some syzygy tables are required (--syzygy " << syzygy_path << ")" << std::endl;
+    return 78;
+  }
+
+  return serve(port);
 }
