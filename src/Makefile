@@ -28,7 +28,7 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-EXE = atbserve
+EXE = rtbserve
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -38,7 +38,7 @@ BINDIR = $(PREFIX)/bin
 PGOBENCH = ./$(EXE) bench
 
 ### Object files
-OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o atbserve.o \
+OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o tbserve.o \
 	material.o misc.o movegen.o movepick.o pawns.o position.o psqt.o \
 	search.o thread.o timeman.o tt.o uci.o ucioption.o syzygy/tbprobe.o
 
@@ -256,7 +256,7 @@ ifneq ($(comp),mingw)
 endif
 
 ### 3.2.1 Debugging
-CXXFLAGS += -DATOMIC
+CXXFLAGS += -DATOMIC -DTABLEBASE_VARIANT=CHESS_VARIANT
 ifeq ($(debug),no)
 	CXXFLAGS += -DNDEBUG
 else

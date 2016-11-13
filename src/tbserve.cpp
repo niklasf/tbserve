@@ -1,5 +1,5 @@
 /*
-  atbserve, an atomic syzygy tablebase server
+  tbserve, a syzygy tablebase server
   Copyright (C) 2016 Niklas Fiekas <niklas.fiekas@backscattering.de>
 
   based on
@@ -139,6 +139,7 @@ bool validate_fen(const char *fen) {
   return true;
 }
 
+template<Variant>
 bool insufficient_material(const Position &pos) {
   // TODO: See if more can be found
   return popcount(pos.pieces()) <= 2;
@@ -215,7 +216,7 @@ void get_api(struct evhttp_request *req, void *) {
 
   Position pos;
   StateListPtr States(new std::deque<StateInfo>(1));
-  pos.set(fen, false, CHESS_VARIANT, &States->back(), Threads.main());
+  pos.set(fen, false, TABLEBASE_VARIANT, &States->back(), Threads.main());
   if (!pos.pos_is_ok()) {
       evhttp_send_error(req, HTTP_BADREQUEST, "Illegal FEN");
       return;
@@ -258,12 +259,14 @@ void get_api(struct evhttp_request *req, void *) {
       info.san = UCI::move(m, false);
       info.checkmate = num_moves == 0 && pos.checkers();
       info.stalemate = num_moves == 0 && !pos.checkers();
-      info.insufficient_material = insufficient_material(pos);
+      info.insufficient_material = insufficient_material<TABLEBASE_VARIANT>(pos);
       info.zeroing = pos.rule50_count() == 0;
 
-      Tablebases::ProbeState state;
-      info.dtz = Tablebases::probe_dtz(pos, &state);
-      info.has_dtz = state == Tablebases::OK;
+      if (!pos.can_castle(ANY_CASTLING)) {
+          Tablebases::ProbeState state;
+          info.dtz = Tablebases::probe_dtz(pos, &state);
+          info.has_dtz = state == Tablebases::OK;
+      }
 
       if (info.checkmate) {
           info.has_wdl = true;
@@ -340,7 +343,7 @@ int serve(int port) {
       return 1;
   }
 
-  std::cout << "atbserve listenning on http://127.0.0.1:" << port << " ..." << std::endl;
+  std::cout << variants[TABLEBASE_VARIANT] << " tbserve listenning on http://127.0.0.1:" << port << " ..." << std::endl;
 
   return event_base_dispatch(base);
 }

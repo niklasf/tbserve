@@ -1204,8 +1204,12 @@ void* init(Entry& e, const Position& pos) {
 #endif
     };
 
+    const char *WdlSuffix = Variant(TABLEBASE_VARIANT) == ATOMIC_VARIANT ? ".atbw" : ".rtbw";
+    const char *DtzSuffix = Variant(TABLEBASE_VARIANT) == ATOMIC_VARIANT ? ".atbz" : ".rtbz";
+
     fname =  (e.key == pos.material_key() ? w + 'v' + b : b + 'v' + w)
-           + (IsWDL ? ".rtbw" : ".rtbz");
+           + (IsWDL ? WdlSuffix : DtzSuffix);
+
 
     uint8_t* data = TBFile(fname).map(&e.baseAddress, &e.mapping, TB_MAGIC[pos.variant()][IsWDL]);
     if (data)
