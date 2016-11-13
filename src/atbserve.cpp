@@ -46,6 +46,93 @@ namespace PSQT {
 
 namespace {
 
+bool validate_fen(const char *fen) {
+  // 1. Board setup
+  for (int rank = 7; rank >= 0; rank--) {
+      bool last_was_number = false;
+      int file = 0;
+
+      for (; file <= 7; file++) {
+          char c = *fen++;
+
+          if (c >= '1' && c <= '8') {
+              if (last_was_number) return false;
+              file += c - '1';
+              last_was_number = true;
+              continue;
+          } else {
+              last_was_number = false;
+          }
+
+          switch (c) {
+              case 'k': case 'K':
+              case 'p': case 'P':
+              case 'n': case 'N':
+              case 'b': case 'B':
+              case 'r': case 'R':
+              case 'q': case 'Q':
+                  break;
+
+              default:
+                  return false;
+          }
+      }
+
+      if (file != 8) return false;
+
+      char c = *fen++;
+      if (!c) return false;
+
+      if (rank > 0) {
+          if (c != '/') return false;
+      } else {
+          if (c != ' ') return false;
+      }
+  }
+
+  // 2. Turn.
+  char c = *fen++;
+  if (c != 'w' && c != 'b') return false;
+
+  // 3. Castling
+  c = *fen++;
+  if (c != '-') {
+      do {
+          if (c >= 'a' && c <= 'h') continue;
+          else if (c >= 'A' && c <= 'H') continue;
+          else if (c == 'q' || c == 'Q') continue;
+          else if (c == 'k' || c == 'K') continue;
+          else return false;
+      } while ((c = *fen++) != ' ');
+  } else if (*fen++ != ' ') return false;
+
+  // 4. En-passant
+  c = *fen++;
+  if (c != '-') {
+      if (c < 'a' || c > 'h') return false;
+
+      c = *fen++;
+      if (c != '3' && c != '6') return false;
+  }
+  if (*fen++ != ' ') return false;
+
+  // 5. Halfmove clock.
+  c = *fen++;
+  do {
+      if (c < '0' && c > '9') return false;
+  } while ((c = *fen++) != ' ');
+
+  // 6. Fullmove number.
+  c = *fen++;
+  do {
+      if (c < '0' || c > '9') return false;
+  } while ((c = *fen++) && c != ' ');
+
+  // End
+  if (c) return false;
+  return true;
+}
+
 bool insufficient_material(const Position &pos) {
   // TODO: See if more can be found
   return popcount(pos.pieces()) <= 2;
@@ -105,11 +192,18 @@ void get_api(struct evhttp_request *req, void *context) {
       return;
   }
 
-  // TODO: Validate FEN
+  if (!validate_fen(fen)) {
+      evhttp_send_error(req, HTTP_BADREQUEST, "Invalid FEN");
+      return;
+  }
 
   Position pos;
   StateListPtr States(new std::deque<StateInfo>(1));
   pos.set(fen, false, CHESS_VARIANT, &States->back(), Threads.main());
+  if (!pos.pos_is_ok()) {
+      evhttp_send_error(req, HTTP_BADREQUEST, "Illegal FEN");
+      return;
+  }
 
   // Build response
   struct evbuffer *res = evbuffer_new();

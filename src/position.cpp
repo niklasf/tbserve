@@ -409,8 +409,6 @@ Position& Position::set(const string& fenStr, bool isChess960, Variant v, StateI
   thisThread = th;
   set_state(st);
 
-  assert(pos_is_ok());
-
   return *this;
 }
 
@@ -1920,7 +1918,7 @@ void Position::flip() {
 
 bool Position::pos_is_ok(int* failedStep) const {
 
-  const bool Fast = true; // Quick (default) or full check?
+  const bool Fast = false; // Quick (default) or full check?
 
   enum { Default, King, Bitboards, State, Lists, Castling };
 
