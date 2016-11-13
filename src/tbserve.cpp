@@ -145,6 +145,23 @@ bool insufficient_material(const Position &pos) {
   return popcount(pos.pieces()) <= 2;
 }
 
+template<>
+bool insufficient_material<CHESS_VARIANT>(const Position &pos) {
+  // Easy mating material
+  if (pos.pieces(PAWN) || pos.pieces(ROOK) || pos.pieces(QUEEN)) return false;
+
+  // A single knight or a single bishop
+  if (popcount(pos.pieces(KNIGHT) | pos.pieces(BISHOP)) == 1) return true;
+
+  // More than a single knight
+  if (pos.pieces(KNIGHT)) return false;
+
+  // All bishops on the same color
+  if (!(pos.pieces(BISHOP) & DarkSquares)) return true;
+  else if (!(pos.pieces(BISHOP) & ~DarkSquares)) return true;
+  else return false;
+}
+
 struct MoveInfo {
   std::string uci;
   std::string san;
