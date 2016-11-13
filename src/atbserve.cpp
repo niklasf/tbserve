@@ -27,6 +27,8 @@
 #include <string>
 #include <algorithm>
 
+#include <getopt.h>
+
 #include <event2/event.h>
 #include <event2/http.h>
 #include <event2/buffer.h>
@@ -45,6 +47,9 @@ namespace PSQT {
 }
 
 namespace {
+
+static int verbose = 0;  // --verbose
+static int cors = 0;  // --cors
 
 bool validate_fen(const char *fen) {
   // 1. Board setup
@@ -171,7 +176,7 @@ bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
   return a.uci.compare(b.uci) < 0;
 }
 
-void get_api(struct evhttp_request *req, void *context) {
+void get_api(struct evhttp_request *req, void *) {
   const char *uri = evhttp_request_get_uri(req);
   if (!uri) {
       std::cout << "evhttp_request_get_uri failed" << std::endl;
@@ -179,6 +184,9 @@ void get_api(struct evhttp_request *req, void *context) {
   }
 
   struct evkeyvalq *headers = evhttp_request_get_output_headers(req);
+  if (cors) {
+      evhttp_add_header(headers, "Access-Control-Allow-Origin", "*");
+  }
 
   struct evkeyvalq query;
   const char *jsonp = nullptr;
@@ -200,12 +208,23 @@ void get_api(struct evhttp_request *req, void *context) {
       return;
   }
 
+  if (verbose) {
+      std::cout << "probing: " << fen << std::endl;
+  }
+
   Position pos;
   StateListPtr States(new std::deque<StateInfo>(1));
   pos.set(fen, false, CHESS_VARIANT, &States->back(), Threads.main());
   if (!pos.pos_is_ok()) {
       evhttp_send_error(req, HTTP_BADREQUEST, "Illegal FEN");
       return;
+  }
+
+  // Set content type
+  if (jsonp && strlen(jsonp)) {
+      evhttp_add_header(headers, "Content-Type", "application/javascript");
+  } else {
+      evhttp_add_header(headers, "Content-Type", "application/json");
   }
 
   // Build response
@@ -332,6 +351,62 @@ int main(int argc, char* argv[]) {
   fclose(stdin);
   setlinebuf(stdout);
 
+  // Options
+  static int port = 5000;
+
+  char *syzygy_path = NULL;
+
+  // Parse command line options
+  static struct option long_options[] = {
+      {"verbose", no_argument,       &verbose, 1},
+      {"cors",    no_argument,       &cors, 1},
+      {"port",    required_argument, 0, 'p'},
+      {"syzygy",  required_argument, 0, 's'},
+      {NULL, 0, 0, 0},
+  };
+
+  while (true) {
+      int option_index;
+      int opt = getopt_long(argc, argv, "p:s:", long_options, &option_index);
+      if (opt < 0) {
+          break;
+      }
+
+      switch (opt) {
+          case 0:
+              break;
+
+          case 'p':
+              port = atoi(optarg);
+              if (!port) {
+                  printf("invalid port: %d\n", port);
+                  return 78;
+              }
+              break;
+
+          case 's':
+              if (!syzygy_path) {
+                  syzygy_path = strdup(optarg);
+              } else {
+                  syzygy_path = (char *) realloc(syzygy_path, strlen(syzygy_path) + 1 + strlen(optarg) + 1);
+                  strcat(syzygy_path, ":");
+                  strcat(syzygy_path, optarg);
+              }
+              break;
+
+          case '?':
+              return 78;
+
+          default:
+              abort();
+      }
+  }
+
+  if (optind != argc) {
+      puts("unexpected positional argument");
+      return 78;
+  }
+
   UCI::init(Options);
   PSQT::init();
   Bitboards::init();
@@ -340,7 +415,7 @@ int main(int argc, char* argv[]) {
   Search::init();
   Pawns::init();
   Threads.init();
-  Tablebases::init("/home/syzygy/Downloads/syzygy");
+  Tablebases::init(syzygy_path);
   TT.resize(Options["Hash"]);
 
   return serve(5001);
