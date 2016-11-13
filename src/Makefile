@@ -28,7 +28,7 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-EXE = stockfish
+EXE = atbserve
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -38,7 +38,7 @@ BINDIR = $(PREFIX)/bin
 PGOBENCH = ./$(EXE) bench
 
 ### Object files
-OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
+OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o atbserve.o \
 	material.o misc.o movegen.o movepick.o pawns.o position.o psqt.o \
 	search.o thread.o timeman.o tt.o uci.o ucioption.o syzygy/tbprobe.o
 
@@ -141,7 +141,7 @@ endif
 
 CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -fno-rtti -std=c++11 $(EXTRACXXFLAGS)
 DEPENDFLAGS += -std=c++11
-LDFLAGS += $(EXTRALDFLAGS)
+LDFLAGS += -levent $(EXTRALDFLAGS)
 
 ifeq ($(COMP),)
 	COMP=gcc
@@ -256,7 +256,7 @@ ifneq ($(comp),mingw)
 endif
 
 ### 3.2.1 Debugging
-CXXFLAGS += -DANTI -DATOMIC -DCRAZYHOUSE -DHORDE -DKOTH -DRACE -DRELAY -DTHREECHECK
+CXXFLAGS += -DATOMIC
 ifeq ($(debug),no)
 	CXXFLAGS += -DNDEBUG
 else
