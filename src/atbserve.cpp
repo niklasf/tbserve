@@ -98,6 +98,7 @@ bool validate_fen(const char *fen) {
   // 2. Turn.
   char c = *fen++;
   if (c != 'w' && c != 'b') return false;
+  if (*fen++ != ' ') return false;
 
   // 3. Castling
   c = *fen++;
