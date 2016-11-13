@@ -24,6 +24,8 @@
 */
 
 #include <iostream>
+#include <string>
+#include <algorithm>
 
 #include <event2/event.h>
 #include <event2/http.h>
@@ -64,6 +66,20 @@ struct MoveInfo {
   bool has_dtz;
   int dtz;
 };
+
+bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
+  if (a.wdl != b.wdl) return a.wdl < b.wdl;
+  if (a.checkmate != b.checkmate) return a.checkmate;
+  if (a.stalemate != b.stalemate) return a.stalemate;
+  if (a.insufficient_material != b.insufficient_material) return a.insufficient_material;
+
+  if (a.wdl < 0 && b.zeroing != a.zeroing) return a.zeroing;
+  if (a.wdl > 0 && a.zeroing != b.zeroing) return b.zeroing;
+
+  if (a.dtz != b.dtz) return b.dtz < a.dtz;
+
+  return a.uci.compare(b.uci) < 0;
+}
 
 void get_api(struct evhttp_request *req, void *context) {
   const char *uri = evhttp_request_get_uri(req);
@@ -138,8 +154,8 @@ void get_api(struct evhttp_request *req, void *context) {
           info.wdl = 0;
       } else if (info.has_dtz) {
           info.has_wdl = true;
-          if (info.dtz < -100 && dtz - pos.rule50_count() <= -100) info.wdl = -1;
-          else if (wdl > 100 && dtz + pos.rule50_count() >= -100) info.wdl = 1;
+          if (info.dtz < -100 && info.dtz - pos.rule50_count() <= -100) info.wdl = -1;
+          else if (info.dtz > 100 && info.dtz + pos.rule50_count() >= -100) info.wdl = 1;
           else if (info.dtz < 0) info.wdl = -2;
           else if (info.dtz > 0) info.wdl = 2;
           else info.wdl = 0;
@@ -151,6 +167,8 @@ void get_api(struct evhttp_request *req, void *context) {
 
       pos.undo_move(m);
   }
+
+  sort(move_infos.begin(), move_infos.end(), compare_move_info);
 
   for (size_t i = 0; i < move_infos.size(); i++) {
       const MoveInfo &m = move_infos[i];
