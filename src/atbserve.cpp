@@ -243,7 +243,6 @@ void get_api(struct evhttp_request *req, void *) {
   evbuffer_add_printf(res, "{\n");
   evbuffer_add_printf(res, "  \"checkmate\": %s,\n", (legals.size() == 0 && pos.checkers()) ? "true" : "false");
   evbuffer_add_printf(res, "  \"stalemate\": %s,\n", (legals.size() == 0 && !pos.checkers()) ? "true": "false");
-  evbuffer_add_printf(res, "  \"insufficient_material\": %s,\n", insufficient_material(pos) ? "true" : "false");
   evbuffer_add_printf(res, "  \"moves\": [\n");
 
   std::vector<MoveInfo> move_infos;
