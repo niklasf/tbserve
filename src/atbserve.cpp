@@ -403,8 +403,13 @@ int main(int argc, char* argv[]) {
   }
 
   if (optind != argc) {
-      puts("unexpected positional argument");
+      std::cout << "unexpected positional argument" << std::endl;
       return 78;
+  }
+
+  if (!syzygy_path) {
+     std::cout << "at least some syzygy tables are required (--syzygy)" << std::endl;
+     return 78;
   }
 
   UCI::init(Options);
