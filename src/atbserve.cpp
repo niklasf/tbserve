@@ -411,12 +411,8 @@ int main(int argc, char* argv[]) {
   PSQT::init();
   Bitboards::init();
   Position::init();
-  Bitbases::init();
-  Search::init();
-  Pawns::init();
   Threads.init();
   Tablebases::init(syzygy_path);
-  TT.resize(Options["Hash"]);
 
   return serve(5001);
 }
