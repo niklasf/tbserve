@@ -376,7 +376,7 @@ void get_api(struct evhttp_request *req, void *) {
       if (!pos.can_castle(ANY_CASTLING)) {
           Tablebases::ProbeState state;
           info.dtz = Tablebases::probe_dtz(pos, &state);
-          info.has_dtz = state == Tablebases::OK;
+          info.has_dtz = state == Tablebases::OK || state == Tablebases::ZEROING_BEST_MOVE;
       }
 
       if (info.checkmate) {
