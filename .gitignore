@@ -1,3 +1,5 @@
 src/stockfish
+src/rtbserve
+src/atbserve
 src/.depend
 *.o

@@ -28,7 +28,7 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-EXE = rtbserve
+EXE = atbserve
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -141,7 +141,7 @@ endif
 
 CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -fno-rtti -std=c++11 $(EXTRACXXFLAGS)
 DEPENDFLAGS += -std=c++11
-LDFLAGS += -levent -lgtb $(EXTRALDFLAGS)
+LDFLAGS += -levent $(EXTRALDFLAGS)
 
 ifeq ($(COMP),)
 	COMP=gcc
@@ -256,7 +256,7 @@ ifneq ($(comp),mingw)
 endif
 
 ### 3.2.1 Debugging
-CXXFLAGS += -DATOMIC -DTABLEBASE_VARIANT=CHESS_VARIANT -DGAVIOTA
+CXXFLAGS += -DATOMIC -DTABLEBASE_VARIANT=ATOMIC_VARIANT
 ifeq ($(debug),no)
 	CXXFLAGS += -DNDEBUG
 else
