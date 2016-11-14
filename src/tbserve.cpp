@@ -421,14 +421,6 @@ void get_api(struct evhttp_request *req, void *) {
       if (info.checkmate) info.san += '#';
       else if (pos.checkers()) info.san += '+';
 
-      if (!pos.can_castle(ANY_CASTLING) && popcount(pos.pieces()) <= Tablebases::MaxCardinality) {
-          Tablebases::ProbeState state;
-          info.dtz = Tablebases::probe_dtz(pos, &state);
-          info.has_dtz = state == Tablebases::OK || state == Tablebases::ZEROING_BEST_MOVE;
-          if (!info.has_dtz) {
-              std::cout << "dtz probe failed " << info.dtz << " (" << state << ")" << std::endl;
-          }
-      }
 
       if (info.checkmate) {
           info.has_wdl = true;
@@ -438,17 +430,24 @@ void get_api(struct evhttp_request *req, void *) {
       } else if (info.stalemate || info.insufficient_material) {
           info.has_wdl = true;
           info.wdl = 0;
-      } else if (info.has_dtz) {
-          info.has_wdl = true;
-          if (info.dtz < -100 && info.dtz - pos.rule50_count() <= -100) info.wdl = -1;
-          else if (info.dtz > 100 && info.dtz + pos.rule50_count() >= -100) info.wdl = 1;
-          else if (info.dtz < 0) info.wdl = -2;
-          else if (info.dtz > 0) info.wdl = 2;
-          else info.wdl = 0;
+      } else if (!pos.can_castle(ANY_CASTLING) && popcount(pos.pieces()) <= Tablebases::MaxCardinality) {
+          Tablebases::ProbeState state;
+          info.dtz = Tablebases::probe_dtz(pos, &state);
+          info.has_dtz = state == Tablebases::OK || state == Tablebases::ZEROING_BEST_MOVE;
+          if (!info.has_dtz) {
+              std::cout << "dtz probe failed after " << UCI::move(m, true) << ": " << info.dtz << " (" << state << ")" << std::endl;
+          } else {
+              info.has_wdl = true;
+              if (info.dtz < -100 && info.dtz - pos.rule50_count() <= -100) info.wdl = -1;
+              else if (info.dtz > 100 && info.dtz + pos.rule50_count() >= -100) info.wdl = 1;
+              else if (info.dtz < 0) info.wdl = -2;
+              else if (info.dtz > 0) info.wdl = 2;
+              else info.wdl = 0;
 
 #ifdef GAVIOTA
-          info.dtm = probe_dtm(pos, &info.has_dtm);
+              info.dtm = probe_dtm(pos, &info.has_dtm);
 #endif
+          }
       } else {
           info.has_wdl = false;
       }
