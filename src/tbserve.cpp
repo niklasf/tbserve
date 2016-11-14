@@ -261,7 +261,7 @@ int probe_dtm(const Position &pos, bool *success) {
   unsigned info = 0;
   unsigned plies_to_mate = 0;
   unsigned available = tb_probe_hard(pos.side_to_move() == WHITE ? tb_WHITE_TO_MOVE : tb_BLACK_TO_MOVE,
-                                     pos.ep_square() != SQ_NONE ? pos.ep_square() : tb_NOSQUARE,
+                                     pos.ep_square() != SQ_NONE ? TB_squares(pos.ep_square()) : tb_NOSQUARE,
                                      0, ws, bs, wp, bp, &info, &plies_to_mate);
   if (!available || info == tb_FORBID || info == tb_UNKNOWN) {
       if (verbose) {
