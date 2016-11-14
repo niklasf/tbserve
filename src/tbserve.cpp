@@ -365,7 +365,7 @@ void get_api(struct evhttp_request *req, void *) {
 
       int num_moves = MoveList<LEGAL>(pos).size();
 
-      MoveInfo info;
+      MoveInfo info = {};
       info.uci = UCI::move(m, false);
       info.san = UCI::move(m, false);
       info.checkmate = num_moves == 0 && pos.checkers();
