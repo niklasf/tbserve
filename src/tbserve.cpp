@@ -101,8 +101,21 @@ std::string move_san(Position &pos, const Move &move, const MoveList<LEGAL> &leg
   return san;
 }
 
+template<Variant>
+bool validate_kings(int wk, int bk) {
+  return wk == 1 && bk == 1;
+}
+
+#ifdef ATOMIC
+template<>
+bool validate_kings<ATOMIC_VARIANT>(int wk, int bk) {
+  return wk + bk >= 1;
+}
+#endif
+
 bool validate_fen(const char *fen) {
   // 1. Board setup
+  int wk = 0, bk = 0;
   for (int rank = 7; rank >= 0; rank--) {
       bool last_was_number = false;
       int file = 0;
@@ -120,7 +133,12 @@ bool validate_fen(const char *fen) {
           }
 
           switch (c) {
-              case 'k': case 'K':
+              case 'k':
+                  bk++;
+                  break;
+              case 'K':
+                  wk++;
+                  break;
               case 'p': case 'P':
               case 'n': case 'N':
               case 'b': case 'B':
@@ -144,6 +162,7 @@ bool validate_fen(const char *fen) {
           if (c != ' ') return false;
       }
   }
+  if (!validate_kings<TABLEBASE_VARIANT>(wk, bk)) return false;
 
   // 2. Turn.
   char c = *fen++;
