@@ -59,7 +59,7 @@ CORS enabled if `--cors` was given. Provide `callback` parameter to use JSONP.
 ### `GET /`
 
 ```
-> curl https://expl.lichess.org/tablebase/standard?fen=8/6B1/8/8/B7/8/K1pk4/8%20b%20-%20-%200%201
+> curl https://tablebase.lichess.org/standard?fen=8/6B1/8/8/B7/8/K1pk4/8%20b%20-%20-%200%201
 ```
 
 name | type | default | description
