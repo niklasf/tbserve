@@ -34,6 +34,10 @@
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 
+#ifdef GAVIOTA
+#include <gtb-probe.h>
+#endif
+
 #include "bitboard.h"
 #include "position.h"
 #include "search.h"
@@ -176,6 +180,9 @@ struct MoveInfo {
 
   bool has_dtz;
   int dtz;
+
+  bool has_dtm;
+  int dtm;
 };
 
 bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
@@ -187,6 +194,8 @@ bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
   if (a.stalemate != b.stalemate) return a.stalemate;
   if (a.insufficient_material != b.insufficient_material) return a.insufficient_material;
 
+  if (a.has_dtm && b.has_dtm && b.dtm != a.dtm) return b.dtm < a.dtm;
+
   if (a.has_wdl && b.has_wdl && a.wdl < 0 && b.zeroing != a.zeroing) return a.zeroing;
   if (a.has_wdl && b.has_wdl && a.wdl > 0 && a.zeroing != b.zeroing) return b.zeroing;
 
@@ -194,6 +203,91 @@ bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
 
   return a.uci.compare(b.uci) < 0;
 }
+
+#ifdef GAVIOTA
+int probe_dtm(const Position &pos, bool *success) {
+  *success = false;
+  if (insufficient_material<TABLEBASE_VARIANT>(pos)) return 0;
+  if (popcount(pos.pieces()) > 5) return 0;
+  if (pos.can_castle(ANY_CASTLING)) return 0;
+
+  unsigned ws[17];
+  unsigned bs[17];
+  unsigned char wp[17];
+  unsigned char bp[17];
+
+  unsigned i = 0;
+  Bitboard white = pos.pieces(WHITE);
+  while (white) {
+      Square sq = pop_lsb(&white);
+      ws[i] = sq;
+
+      if (pos.piece_on(sq) == W_PAWN) wp[i] = tb_PAWN;
+      else if (pos.piece_on(sq) == W_KNIGHT) wp[i] = tb_KNIGHT;
+      else if (pos.piece_on(sq) == W_BISHOP) wp[i] = tb_BISHOP;
+      else if (pos.piece_on(sq) == W_ROOK) wp[i] = tb_ROOK;
+      else if (pos.piece_on(sq) == W_QUEEN) wp[i] = tb_QUEEN;
+      else if (pos.piece_on(sq) == W_KING) wp[i] = tb_KING;
+      else {
+          std::cout << "inconsistent white bitboard" << std::endl;
+          abort();
+      }
+      i++;
+  }
+  ws[i] = tb_NOSQUARE;
+  wp[i] = tb_NOPIECE;
+
+  i = 0;
+  Bitboard black = pos.pieces(BLACK);
+  while (black) {
+      Square sq = pop_lsb(&black);
+      bs[i] = sq;
+
+      if (pos.piece_on(sq) == B_PAWN) bp[i] = tb_PAWN;
+      else if (pos.piece_on(sq) == B_KNIGHT) bp[i] = tb_KNIGHT;
+      else if (pos.piece_on(sq) == B_BISHOP) bp[i] = tb_BISHOP;
+      else if (pos.piece_on(sq) == B_ROOK) bp[i] = tb_ROOK;
+      else if (pos.piece_on(sq) == B_QUEEN) bp[i] = tb_QUEEN;
+      else if (pos.piece_on(sq) == B_KING) bp[i] = tb_KING;
+      else {
+          std::cout << "inconsistent black bitboard" << std::endl;
+          abort();
+      }
+      i++;
+  }
+  bs[i] = tb_NOSQUARE;
+  bp[i] = tb_NOPIECE;
+
+  unsigned info = 0;
+  unsigned plies_to_mate = 0;
+  unsigned available = tb_probe_hard(pos.side_to_move() == WHITE ? tb_WHITE_TO_MOVE : tb_BLACK_TO_MOVE,
+                                     pos.ep_square() != SQ_NONE ? pos.ep_square() : tb_NOSQUARE,
+                                     0, ws, bs, wp, bp, &info, &plies_to_mate);
+  if (!available || info == tb_FORBID || info == tb_UNKNOWN) {
+      if (verbose) {
+          std::cout << "gaviota probe failed: info = " << info << std::endl;
+      }
+      return 0;
+  }
+
+  if (info == tb_DRAW) return 0;
+
+  *success = true;
+
+  if (info == tb_WMATE && pos.side_to_move() == WHITE) {
+      return plies_to_mate;
+  } else if (info == tb_BMATE && pos.side_to_move() == BLACK) {
+      return plies_to_mate;
+  } else if (info == tb_WMATE && pos.side_to_move() == BLACK) {
+      return -plies_to_mate;
+  } else if (info == tb_BMATE && pos.side_to_move() == WHITE) {
+      return -plies_to_mate;
+  } else {
+      std::cout << "gaviota tablebase error, info = " << info << std::endl;
+      abort();
+  }
+}
+#endif
 
 void get_api(struct evhttp_request *req, void *) {
   const char *uri = evhttp_request_get_uri(req);
@@ -288,6 +382,8 @@ void get_api(struct evhttp_request *req, void *) {
       if (info.checkmate) {
           info.has_wdl = true;
           info.wdl = -2;
+          info.has_dtm = true;
+          info.dtm = 0;
       } else if (info.stalemate || info.insufficient_material) {
           info.has_wdl = true;
           info.wdl = 0;
@@ -298,6 +394,10 @@ void get_api(struct evhttp_request *req, void *) {
           else if (info.dtz < 0) info.wdl = -2;
           else if (info.dtz > 0) info.wdl = 2;
           else info.wdl = 0;
+
+#ifdef GAVIOTA
+          info.dtm = probe_dtm(pos, &info.has_dtm);
+#endif
       } else {
           info.has_wdl = false;
       }
@@ -322,8 +422,11 @@ void get_api(struct evhttp_request *req, void *) {
       if (m.has_wdl) evbuffer_add_printf(res, "\"wdl\": %d, ", m.wdl);
       else evbuffer_add_printf(res, "\"wdl\": null, ");
 
-      if (m.has_dtz) evbuffer_add_printf(res, "\"dtz\": %d}", m.dtz);
-      else evbuffer_add_printf(res, "\"dtz\": null}");
+      if (m.has_dtz) evbuffer_add_printf(res, "\"dtz\": %d", m.dtz);
+      else evbuffer_add_printf(res, "\"dtz\": null");
+
+      if (m.has_dtm) evbuffer_add_printf(res, ", \"dtm\": %d}", m.dtm);
+      else evbuffer_add_printf(res, "}");
 
       evbuffer_add_printf(res, (i + 1 < move_infos.size()) ? ",\n" : "\n");
   }
@@ -376,18 +479,33 @@ int main(int argc, char* argv[]) {
 
   char *syzygy_path = NULL;
 
+#ifdef GAVIOTA
+  const char **gaviota_paths = tbpaths_init();
+  if (!gaviota_paths) {
+      std::cout << "tbpaths_init failed" << std::endl;
+      abort();
+  }
+#endif
+
   // Parse command line options
   static struct option long_options[] = {
       {"verbose", no_argument,       &verbose, 1},
       {"cors",    no_argument,       &cors, 1},
       {"port",    required_argument, 0, 'p'},
       {"syzygy",  required_argument, 0, 's'},
+#ifdef GAVIOTA
+      {"gaviota", required_argument, 0, 'g'},
+#endif
       {NULL, 0, 0, 0},
   };
 
   while (true) {
       int option_index;
+#ifdef GAVIOTA
+      int opt = getopt_long(argc, argv, "p:s:g:", long_options, &option_index);
+#else
       int opt = getopt_long(argc, argv, "p:s:", long_options, &option_index);
+#endif
       if (opt < 0) {
           break;
       }
@@ -414,10 +532,21 @@ int main(int argc, char* argv[]) {
               }
               break;
 
+#ifdef GAVIOTA
+          case 'g':
+              gaviota_paths = tbpaths_add(gaviota_paths, optarg);
+              if (!gaviota_paths) {
+                  std::cout << "tbpaths_add failed" << std::endl;
+                  abort();
+              }
+              break;
+#endif
+
           case '?':
               return 78;
 
           default:
+              std::cout << "getopt error: " << opt << std::endl;
               abort();
       }
   }
@@ -428,9 +557,11 @@ int main(int argc, char* argv[]) {
   }
 
   if (!syzygy_path) {
-     std::cout << "at least some syzygy tables are required (--syzygy)" << std::endl;
-     return 78;
+      std::cout << "at least some syzygy tables are required (--syzygy)" << std::endl;
+      return 78;
   }
+
+  std::cout << "SYZYGY initialization" << std::endl;
 
   UCI::init(Options);
   PSQT::init();
@@ -440,9 +571,22 @@ int main(int argc, char* argv[]) {
   Tablebases::init(syzygy_path);
 
   if (Tablebases::MaxCardinality < 3) {
-    std::cout << "at least some syzygy tables are required (--syzygy " << syzygy_path << ")" << std::endl;
-    return 78;
+      std::cout << "at least some syzygy tables are required (--syzygy " << syzygy_path << ")" << std::endl;
+      return 78;
   }
+
+  std::cout << "  Path = " << syzygy_path << std::endl;
+  std::cout << "  Cardinality = " << Tablebases::MaxCardinality << std::endl;
+  std::cout << std::endl;
+
+#ifdef GAVIOTA
+  tbcache_init(32 * 1024 * 1024, 10);  // 32 MiB, 10% WDL
+  tbstats_reset();
+  char *info = tb_init(true, tb_CP4, gaviota_paths);
+  if (info) {
+      puts(info);
+  }
+#endif
 
   return serve(port);
 }

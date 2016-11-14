@@ -141,7 +141,7 @@ endif
 
 CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -fno-rtti -std=c++11 $(EXTRACXXFLAGS)
 DEPENDFLAGS += -std=c++11
-LDFLAGS += -levent $(EXTRALDFLAGS)
+LDFLAGS += -levent -lgtb $(EXTRALDFLAGS)
 
 ifeq ($(COMP),)
 	COMP=gcc
@@ -256,7 +256,7 @@ ifneq ($(comp),mingw)
 endif
 
 ### 3.2.1 Debugging
-CXXFLAGS += -DATOMIC -DTABLEBASE_VARIANT=CHESS_VARIANT
+CXXFLAGS += -DATOMIC -DTABLEBASE_VARIANT=CHESS_VARIANT -DGAVIOTA
 ifeq ($(debug),no)
 	CXXFLAGS += -DNDEBUG
 else
