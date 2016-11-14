@@ -399,9 +399,16 @@ void get_api(struct evhttp_request *req, void *) {
   if (jsonp && strlen(jsonp)) {
       evbuffer_add_printf(res, "%s(", jsonp);
   }
+
+#ifdef ATOMIC
+  bool checkmate = legals.size() == 0 && (pos.checkers() || pos.is_atomic_loss());
+#else
+  bool checkmate = legals.size() == 0 && pos.checkers();
+#endif
+
   evbuffer_add_printf(res, "{\n");
-  evbuffer_add_printf(res, "  \"checkmate\": %s,\n", (legals.size() == 0 && pos.checkers()) ? "true" : "false");
-  evbuffer_add_printf(res, "  \"stalemate\": %s,\n", (legals.size() == 0 && !pos.checkers()) ? "true": "false");
+  evbuffer_add_printf(res, "  \"checkmate\": %s,\n", checkmate ? "true" : "false");
+  evbuffer_add_printf(res, "  \"stalemate\": %s,\n", (legals.size() == 0 && !checkmate) ? "true": "false");
   evbuffer_add_printf(res, "  \"moves\": [\n");
 
   std::vector<MoveInfo> move_infos;
@@ -413,8 +420,12 @@ void get_api(struct evhttp_request *req, void *) {
 
       pos.do_move(m, *st++);
       int num_moves = MoveList<LEGAL>(pos).size();
+#ifdef ATOMIC
+      info.checkmate = num_moves == 0 && (pos.checkers() || pos.is_atomic_loss());
+#else
       info.checkmate = num_moves == 0 && pos.checkers();
-      info.stalemate = num_moves == 0 && !pos.checkers();
+#endif
+      info.stalemate = num_moves == 0 && !checkmate;
       info.insufficient_material = insufficient_material<TABLEBASE_VARIANT>(pos);
       info.zeroing = pos.rule50_count() == 0;
 
