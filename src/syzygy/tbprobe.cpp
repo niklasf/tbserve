@@ -481,7 +481,13 @@ void HashTable::insert(const std::vector<PieceType>& pieces) {
     for (PieceType pt : pieces)
         code += PieceToChar[pt];
 
-    TBFile file(code.insert(code.find('K', 1), "v") + ".rtbw"); // KRK -> KRvK
+#ifdef ATOMIC
+    const char *WdlSuffix = Variant(TABLEBASE_VARIANT) == ATOMIC_VARIANT ? ".atbw" : ".rtbw";
+#else
+    const char *WdlSuffix = ".rtbw";
+#endif
+
+    TBFile file(code.insert(code.find('K', 1), "v") + WdlSuffix); // KRK -> KRvK
 
     if (!file.is_open())
         return;
