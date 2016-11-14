@@ -56,7 +56,49 @@ static int verbose = 0;  // --verbose
 static int cors = 0;  // --cors
 
 std::string move_san(Position &pos, const Move &move, const MoveList<LEGAL> &legals) {
-  return UCI::move(move, true);
+  Square from = from_sq(move);
+  Square to = to_sq(move);
+
+  if (type_of(move) == CASTLING) {
+      if (to > from) return "O-O";
+      else return "O-O-O";
+  }
+
+  std::string san;
+
+  PieceType pt = type_of(pos.piece_on(from));
+
+  if (pt == PAWN) {
+      if (file_of(from) != file_of(to)) {
+          san += char('a' + file_of(from));
+          san += 'x';
+      }
+      san += UCI::square(to);
+      if (type_of(move) == PROMOTION) {
+          san += '=';
+          san += " PNBRQK"[promotion_type(move)];
+      }
+      return san;
+  }
+
+  san = " PNBRQK"[pt];
+
+  bool rank = false, file = false;
+  for (const Move &candidate : legals) {
+      if (candidate == move) continue;
+      if (to_sq(candidate) != to) continue;
+      if (type_of(pos.piece_on(from_sq(candidate))) != pt) continue;
+
+      if (rank_of(from_sq(candidate)) == rank_of(from)) file = true;
+      if (file_of(from_sq(candidate)) == file_of(from)) rank = true;
+      else file = true;
+  }
+  if (file) san += char('a' + file_of(from));
+  if (rank) san += char('1' + rank_of(from));
+
+  if (pos.piece_on(to)) san += 'x';
+  san += UCI::square(to);
+  return san;
 }
 
 bool validate_fen(const char *fen) {
@@ -367,7 +409,7 @@ void get_api(struct evhttp_request *req, void *) {
   for (const auto& m : legals) {
       MoveInfo info = {};
       info.uci = UCI::move(m, true);
-      info.san = UCI::move(m, true); // move_san(pos, m, legals);
+      info.san = move_san(pos, m, legals);
 
       pos.do_move(m, *st++);
       int num_moves = MoveList<LEGAL>(pos).size();
@@ -375,6 +417,9 @@ void get_api(struct evhttp_request *req, void *) {
       info.stalemate = num_moves == 0 && !pos.checkers();
       info.insufficient_material = insufficient_material<TABLEBASE_VARIANT>(pos);
       info.zeroing = pos.rule50_count() == 0;
+
+      if (info.checkmate) info.san += '#';
+      else if (pos.checkers()) info.san += '+';
 
       if (!pos.can_castle(ANY_CASTLING) && popcount(pos.pieces()) <= Tablebases::MaxCardinality) {
           Tablebases::ProbeState state;
