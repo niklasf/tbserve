@@ -1204,8 +1204,13 @@ void* init(Entry& e, const Position& pos) {
 #endif
     };
 
+#ifdef ATOMIC
     const char *WdlSuffix = Variant(TABLEBASE_VARIANT) == ATOMIC_VARIANT ? ".atbw" : ".rtbw";
     const char *DtzSuffix = Variant(TABLEBASE_VARIANT) == ATOMIC_VARIANT ? ".atbz" : ".rtbz";
+#else
+    const char *WdlSuffix = ".rtbw";
+    const char *DtzSuffix = ".rtbz";
+#endif
 
     fname =  (e.key == pos.material_key() ? w + 'v' + b : b + 'v' + w)
            + (IsWDL ? WdlSuffix : DtzSuffix);

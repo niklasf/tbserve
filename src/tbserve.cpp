@@ -55,6 +55,10 @@ namespace {
 static int verbose = 0;  // --verbose
 static int cors = 0;  // --cors
 
+std::string move_san(Position &pos, const Move &move, const MoveList<LEGAL> &legals) {
+  return UCI::move(move, true);
+}
+
 bool validate_fen(const char *fen) {
   // 1. Board setup
   for (int rank = 7; rank >= 0; rank--) {
@@ -325,9 +329,10 @@ void get_api(struct evhttp_request *req, void *) {
       std::cout << "probing: " << fen << std::endl;
   }
 
+  StateInfo states[MAX_MOVES];
+  StateInfo *st = states;
   Position pos;
-  StateListPtr States(new std::deque<StateInfo>(1));
-  pos.set(fen, false, TABLEBASE_VARIANT, &States->back(), Threads.main());
+  pos.set(fen, true, TABLEBASE_VARIANT, st++, Threads.main());
   if (!pos.pos_is_ok()) {
       evhttp_send_error(req, HTTP_BADREQUEST, "Illegal FEN");
       return;
@@ -359,24 +364,25 @@ void get_api(struct evhttp_request *req, void *) {
 
   std::vector<MoveInfo> move_infos;
 
-  StateInfo st;
   for (const auto& m : legals) {
-      pos.do_move(m, st);
-
-      int num_moves = MoveList<LEGAL>(pos).size();
-
       MoveInfo info = {};
-      info.uci = UCI::move(m, false);
-      info.san = UCI::move(m, false);
+      info.uci = UCI::move(m, true);
+      info.san = UCI::move(m, true); // move_san(pos, m, legals);
+
+      pos.do_move(m, *st++);
+      int num_moves = MoveList<LEGAL>(pos).size();
       info.checkmate = num_moves == 0 && pos.checkers();
       info.stalemate = num_moves == 0 && !pos.checkers();
       info.insufficient_material = insufficient_material<TABLEBASE_VARIANT>(pos);
       info.zeroing = pos.rule50_count() == 0;
 
-      if (!pos.can_castle(ANY_CASTLING)) {
+      if (!pos.can_castle(ANY_CASTLING) && popcount(pos.pieces()) <= Tablebases::MaxCardinality) {
           Tablebases::ProbeState state;
           info.dtz = Tablebases::probe_dtz(pos, &state);
           info.has_dtz = state == Tablebases::OK || state == Tablebases::ZEROING_BEST_MOVE;
+          if (!info.has_dtz) {
+              std::cout << "dtz probe failed " << info.dtz << " (" << state << ")" << std::endl;
+          }
       }
 
       if (info.checkmate) {

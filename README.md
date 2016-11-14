@@ -28,7 +28,7 @@ Finally:
 ```
 cd src
 make -f Makefile.regular ARCH=x86-64-modern build
-make -f Makefile.atomic ARCH=x86-64-modern build
+make -f Makefile.atomic -B ARCH=x86-64-modern build
 ```
 
 Downloading tablebases
