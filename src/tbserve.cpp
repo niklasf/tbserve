@@ -648,7 +648,7 @@ int main(int argc, char* argv[]) {
   Bitboards::init();
   Position::init();
   Threads.init();
-  Tablebases::init(syzygy_path);
+  Tablebases::init(syzygy_path, TABLEBASE_VARIANT);
 
   if (Tablebases::MaxCardinality < 3) {
       std::cout << "at least some syzygy tables are required (--syzygy " << syzygy_path << ")" << std::endl;
