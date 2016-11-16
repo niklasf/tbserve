@@ -109,7 +109,7 @@ bool validate_kings(int wk, int bk) {
 #ifdef ATOMIC
 template<>
 bool validate_kings<ATOMIC_VARIANT>(int wk, int bk) {
-  return wk + bk >= 1;
+  return wk + bk >= 1 && wk <= 1 && bk <= 1;
 }
 #endif
 
