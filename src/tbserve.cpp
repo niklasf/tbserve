@@ -524,8 +524,13 @@ void get_api(struct evhttp_request *req, void *) {
                           m.insufficient_material ? "true": "false",
                           m.zeroing ? "true": "false");
 
-      if (m.has_wdl) evbuffer_add_printf(res, "\"%s\": %d, ", legacy ? "real_wdl" : "wdl", m.wdl);
+      if (m.has_wdl) evbuffer_add_printf(res, "\"wdl\": %d, ", m.wdl);
       else evbuffer_add_printf(res, "\"wdl\": null, ");
+
+      if (legacy) {
+          if (m.has_wdl) evbuffer_add_printf(res, "\"real_wdl\": %d, ", m.wdl);
+          else evbuffer_add_printf(res, "\"real_wdl\": null, ");
+      }
 
       if (m.has_dtz) evbuffer_add_printf(res, "\"dtz\": %d", m.dtz);
       else evbuffer_add_printf(res, "\"dtz\": null");
