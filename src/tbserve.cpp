@@ -210,7 +210,6 @@ bool validate_fen(const char *fen) {
 
 template<Variant>
 bool insufficient_material(const Position &pos) {
-  // TODO: See if more can be found
   return popcount(pos.pieces()) <= 2;
 }
 
@@ -230,6 +229,31 @@ bool insufficient_material<CHESS_VARIANT>(const Position &pos) {
   else if (!(pos.pieces(BISHOP) & ~DarkSquares)) return true;
   else return false;
 }
+
+#ifdef ATOMIC
+template<>
+bool insufficient_material<ATOMIC_VARIANT>(const Position &pos) {
+  // Sometimes sufficient mating material
+  if (pos.pieces(PAWN) || pos.pieces(QUEEN)) return false;
+
+  // A single knight, bishop or rook
+  if (popcount(pos.pieces(KNIGHT) | pos.pieces(BISHOP) | pos.pieces(ROOK)) == 1) return true;
+
+  // Only knights
+  if (pos.pieces() == (pos.pieces(KING) | pos.pieces(KNIGHT))) return popcount(pos.pieces(KNIGHT)) <= 2;
+
+  // Only bishops
+  if (pos.pieces() == (pos.pieces(KING) | pos.pieces(BISHOP))) {
+      // All bishops on opposite colors
+      if (!(pos.pieces(WHITE, BISHOP) & DarkSquares))
+          return !(pos.pieces(BLACK, BISHOP) & ~DarkSquares);
+      if (!(pos.pieces(WHITE, BISHOP) & ~DarkSquares))
+          return !(pos.pieces(BLACK, BISHOP) & DarkSquares);
+  }
+
+  return false;
+}
+#endif
 
 struct MoveInfo {
   std::string uci;
