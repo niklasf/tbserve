@@ -54,6 +54,7 @@ namespace {
 
 static int verbose = 0;  // --verbose
 static int cors = 0;  // --cors
+static int legacy = 0; // --legacy
 
 std::string move_san(Position &pos, const Move &move, const MoveList<LEGAL> &legals) {
   Square from = from_sq(move);
@@ -523,7 +524,7 @@ void get_api(struct evhttp_request *req, void *) {
                           m.insufficient_material ? "true": "false",
                           m.zeroing ? "true": "false");
 
-      if (m.has_wdl) evbuffer_add_printf(res, "\"wdl\": %d, ", m.wdl);
+      if (m.has_wdl) evbuffer_add_printf(res, "\"%s\": %d, ", legacy ? "real_wdl" : "wdl", m.wdl);
       else evbuffer_add_printf(res, "\"wdl\": null, ");
 
       if (m.has_dtz) evbuffer_add_printf(res, "\"dtz\": %d", m.dtz);
@@ -595,6 +596,7 @@ int main(int argc, char* argv[]) {
   static struct option long_options[] = {
       {"verbose", no_argument,       &verbose, 1},
       {"cors",    no_argument,       &cors, 1},
+      {"legacy",  no_argument,       &legacy, 1},
       {"port",    required_argument, 0, 'p'},
       {"syzygy",  required_argument, 0, 's'},
 #ifdef GAVIOTA
