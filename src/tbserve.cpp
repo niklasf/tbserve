@@ -114,6 +114,13 @@ bool validate_kings<ATOMIC_VARIANT>(int wk, int bk) {
 }
 #endif
 
+#ifdef ANTI
+template<>
+bool validate_kings<ANTI_VARIANT>(int wk, int bk) {
+  return true;
+}
+#endif
+
 bool validate_fen(const char *fen) {
   // 1. Board setup
   int wk = 0, bk = 0;
@@ -211,7 +218,7 @@ bool validate_fen(const char *fen) {
 
 template<Variant>
 bool insufficient_material(const Position &pos) {
-  return popcount(pos.pieces()) <= 2;
+  return false;
 }
 
 template<>
@@ -444,8 +451,10 @@ void get_api(struct evhttp_request *req, void *) {
       evbuffer_add_printf(res, "%s(", jsonp);
   }
 
-#ifdef ATOMIC
+#if defined(ATOMIC)
   bool checkmate = legals.size() == 0 && (pos.checkers() || pos.is_atomic_loss());
+#elif defined(ANTI)
+  bool checkmate = pos.is_anti_win();
 #else
   bool checkmate = legals.size() == 0 && pos.checkers();
 #endif
@@ -464,8 +473,10 @@ void get_api(struct evhttp_request *req, void *) {
 
       pos.do_move(m, *st++);
       int num_moves = MoveList<LEGAL>(pos).size();
-#ifdef ATOMIC
+#if defined(ATOMIC)
       info.checkmate = num_moves == 0 && (pos.checkers() || pos.is_atomic_loss());
+#elif defined(ANTI)
+      info.checkmate = pos.is_anti_win();
 #else
       info.checkmate = num_moves == 0 && pos.checkers();
 #endif
@@ -475,7 +486,6 @@ void get_api(struct evhttp_request *req, void *) {
 
       if (info.checkmate) info.san += '#';
       else if (pos.checkers()) info.san += '+';
-
 
       if (info.checkmate) {
           info.has_wdl = true;
