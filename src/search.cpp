@@ -100,7 +100,7 @@ namespace {
   560,
 #endif
 #ifdef CRAZYHOUSE
-  150,
+  125,
 #endif
 #ifdef HORDE
   150,
@@ -206,6 +206,9 @@ namespace {
     {1, 0, 0, 0, 0, 1, 1 ,1},
   };
 
+  Value bonus(Depth depth)   { int d = depth / ONE_PLY ; return  Value(d * d + 2 * d - 2); }
+  Value penalty(Depth depth) { int d = depth / ONE_PLY ; return -Value(d * d + 4 * d + 1); }
+
   const size_t HalfDensitySize = std::extent<decltype(HalfDensity)>::value;
 
   EasyMoveManager EasyMove;
@@ -307,7 +310,7 @@ template uint64_t Search::perft<true>(Position&, Depth);
 void MainThread::search() {
 
   Color us = rootPos.side_to_move();
-  Time.init(Limits, us, rootPos.game_ply());
+  Time.init(Limits, us, rootPly = rootPos.game_ply());
 
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
@@ -647,9 +650,13 @@ namespace {
     if (thisThread->resetCalls.load(std::memory_order_relaxed))
     {
         thisThread->resetCalls = false;
-        thisThread->callsCnt = 0;
+        // At low node count increase the checking rate to about 0.1% of nodes
+        // otherwise use a default value.
+        thisThread->callsCnt = Limits.nodes ? std::min((int64_t)4096, Limits.nodes / 1024)
+                                            : 4096;
     }
-    if (++thisThread->callsCnt > 4096)
+
+    if (--thisThread->callsCnt <= 0)
     {
         for (Thread* th : Threads)
             th->resetCalls = true;
@@ -739,6 +746,7 @@ namespace {
     ss->counterMoves = nullptr;
     (ss+1)->skipEarlyPruning = false;
     (ss+2)->killers[0] = (ss+2)->killers[1] = MOVE_NONE;
+    Square prevSq = to_sq((ss-1)->currentMove);
 
     // Step 4. Transposition table lookup. We don't want the score of a partial
     // search to overwrite a previous full search TT value, so we use a different
@@ -761,21 +769,12 @@ namespace {
         // If ttMove is quiet, update killers, history, counter move on TT hit
         if (ttValue >= beta && ttMove)
         {
-            int d = depth / ONE_PLY;
-
             if (!pos.capture_or_promotion(ttMove))
-            {
-                Value bonus = Value(d * d + 2 * d - 2);
-                update_stats(pos, ss, ttMove, nullptr, 0, bonus);
-            }
+                update_stats(pos, ss, ttMove, nullptr, 0, bonus(depth));
 
             // Extra penalty for a quiet TT move in previous ply when it gets refuted
             if ((ss-1)->moveCount == 1 && !pos.captured_piece())
-            {
-                Value penalty = Value(d * d + 4 * d + 1);
-                Square prevSq = to_sq((ss-1)->currentMove);
-                update_cm_stats(ss-1, pos.piece_on(prevSq), prevSq, -penalty);
-            }
+                update_cm_stats(ss-1, pos.piece_on(prevSq), prevSq, penalty(depth));
         }
         return ttValue;
     }
@@ -855,7 +854,7 @@ namespace {
     {
         eval = ss->staticEval =
         (ss-1)->currentMove != MOVE_NULL ? evaluate(pos)
-                                         : -(ss-1)->staticEval + 2 * Eval::Tempo;
+                                         : -(ss-1)->staticEval + 2 * Eval::Tempo[pos.variant()];
 
         tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE,
                   ss->staticEval, TT.generation());
@@ -1117,10 +1116,16 @@ moves_loop: // When in check search starts from here
                   && !pos.see_ge(move, Value(-35 * lmrDepth * lmrDepth)))
                   continue;
           }
-          else if (   depth < 7 * ONE_PLY
-                   && !extension
-                   && !pos.see_ge(move, Value(-35 * depth / ONE_PLY * depth / ONE_PLY)))
+          else if (depth < 7 * ONE_PLY && !extension)
+          {
+              Value v = -Value(399 + 35 * depth / ONE_PLY * depth / ONE_PLY);
+
+              if (PvNode)
+                  v += beta - alpha - 1;
+
+              if (!pos.see_ge(move, v))
                   continue;
+          }
       }
 
       // Speculative prefetch as early as possible
@@ -1159,7 +1164,6 @@ moves_loop: // When in check search starts from here
               // castling moves, because they are coded as "king captures rook" and
               // hence break make_move().
               else if (   type_of(move) == NORMAL
-                       && type_of(pos.piece_on(to_sq(move))) != PAWN
                        && !pos.see_ge(make_move(to_sq(move), from_sq(move)),  VALUE_ZERO))
                   r -= 2 * ONE_PLY;
 
@@ -1323,33 +1327,20 @@ moves_loop: // When in check search starts from here
     }
     else if (bestMove)
     {
-        int d = depth / ONE_PLY;
 
         // Quiet best move: update killers, history and countermoves
         if (!pos.capture_or_promotion(bestMove))
-        {
-            Value bonus = Value(d * d + 2 * d - 2);
-            update_stats(pos, ss, bestMove, quietsSearched, quietCount, bonus);
-        }
+            update_stats(pos, ss, bestMove, quietsSearched, quietCount, bonus(depth));
 
         // Extra penalty for a quiet TT move in previous ply when it gets refuted
         if ((ss-1)->moveCount == 1 && !pos.captured_piece())
-        {
-            Value penalty = Value(d * d + 4 * d + 1);
-            Square prevSq = to_sq((ss-1)->currentMove);
-            update_cm_stats(ss-1, pos.piece_on(prevSq), prevSq, -penalty);
-        }
+            update_cm_stats(ss-1, pos.piece_on(prevSq), prevSq, penalty(depth));
     }
     // Bonus for prior countermove that caused the fail low
     else if (    depth >= 3 * ONE_PLY
              && !pos.captured_piece()
              && is_ok((ss-1)->currentMove))
-    {
-        int d = depth / ONE_PLY;
-        Value bonus = Value(d * d + 2 * d - 2);
-        Square prevSq = to_sq((ss-1)->currentMove);
-        update_cm_stats(ss-1, pos.piece_on(prevSq), prevSq, bonus);
-    }
+        update_cm_stats(ss-1, pos.piece_on(prevSq), prevSq, bonus(depth));
 
     tte->save(posKey, value_to_tt(bestValue, ss->ply),
               bestValue >= beta ? BOUND_LOWER :
@@ -1510,7 +1501,7 @@ moves_loop: // When in check search starts from here
         else
             ss->staticEval = bestValue =
             (ss-1)->currentMove != MOVE_NULL ? evaluate(pos)
-                                             : -(ss-1)->staticEval + 2 * Eval::Tempo;
+                                             : -(ss-1)->staticEval + 2 * Eval::Tempo[pos.variant()];
 
         // Stand pat. Return immediately if static value is at least beta
         if (bestValue >= beta)

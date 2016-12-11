@@ -181,18 +181,39 @@ struct PairsData {
     int groupLen[TBPIECES+1];      // Number of pieces in a given group: KRKN -> (3, 1)
 };
 
-// Helper struct to avoid to manually define entry copy c'tor as we should
-// because default one is not compatible with std::atomic_bool.
+// Helper struct to avoid manually defining entry copy constructor as we
+// should because the default one is not compatible with std::atomic_bool.
 struct Atomic {
     Atomic() = default;
     Atomic(const Atomic& e) { ready = e.ready.load(); } // MSVC 2013 wants assignment within body
     std::atomic_bool ready;
 };
 
-struct WDLEntry : public Atomic {
-    WDLEntry(const std::string& code, Variant v);
-   ~WDLEntry();
+// We define types for the different parts of the WLDEntry and DTZEntry with
+// corresponding specializations for pieces or pawns.
 
+struct WLDEntryPiece {
+    PairsData* precomp;
+};
+
+struct WDLEntryPawn {
+    uint8_t pawnCount[2];     // [Lead color / other color]
+    WLDEntryPiece file[2][4]; // [wtm / btm][FILE_A..FILE_D]
+};
+
+struct DTZEntryPiece {
+    PairsData* precomp;
+    uint16_t map_idx[4]; // WDLWin, WDLLoss, WDLCursedWin, WDLCursedLoss
+    uint8_t* map;
+};
+
+struct DTZEntryPawn {
+    uint8_t pawnCount[2];
+    DTZEntryPiece file[4];
+    uint8_t* map;
+};
+
+struct TBEntry : public Atomic {
     void* baseAddress;
     uint64_t mapping;
     Key key;
@@ -202,48 +223,24 @@ struct WDLEntry : public Atomic {
     int numUniquePieces;
     int minLikeMan;
     Variant variant;
-    union {
-        struct {
-            PairsData* precomp;
-        } pieceTable[2]; // [wtm / btm]
+};
 
-        struct {
-            uint8_t pawnCount[2]; // [Lead color / other color]
-            struct {
-                PairsData* precomp;
-            } file[2][4]; // [wtm / btm][FILE_A..FILE_D]
-        } pawnTable;
+// Now the main types: WDLEntry and DTZEntry
+struct WDLEntry : public TBEntry {
+    WDLEntry(const std::string& code, Variant v);
+   ~WDLEntry();
+    union {
+        WLDEntryPiece pieceTable[2]; // [wtm / btm]
+        WDLEntryPawn  pawnTable;
     };
 };
 
-struct DTZEntry : public Atomic {
+struct DTZEntry : public TBEntry {
     DTZEntry(const WDLEntry& wdl);
    ~DTZEntry();
-
-    void* baseAddress;
-    uint64_t mapping;
-    Key key;
-    Key key2;
-    int pieceCount;
-    bool hasPawns;
-    int numUniquePieces;
-    int minLikeMan;
-    Variant variant;
     union {
-        struct {
-            PairsData* precomp;
-            uint16_t map_idx[4]; // WDLWin, WDLLoss, WDLCursedWin, WDLCursedLoss
-            uint8_t* map;
-        } pieceTable;
-
-        struct {
-            uint8_t pawnCount[2];
-            struct {
-                PairsData* precomp;
-                uint16_t map_idx[4];
-            } file[4];
-            uint8_t* map;
-        } pawnTable;
+        DTZEntryPiece pieceTable;
+        DTZEntryPawn  pawnTable;
     };
 };
 
@@ -400,10 +397,10 @@ template<typename T, int Half = sizeof(T) / 2, int End = sizeof(T) - 1>
 inline void swap_byte(T& x)
 {
     char tmp, *c = (char*)&x;
-    if (Half) // Fix a MSVC 2015 warning
-        for (int i = 0; i < Half; ++i)
-            tmp = c[i], c[i] = c[End - i], c[End - i] = tmp;
+    for (int i = 0; i < Half; ++i)
+        tmp = c[i], c[i] = c[End - i], c[End - i] = tmp;
 }
+template<> inline void swap_byte<uint8_t, 0, 0>(uint8_t&) {}
 
 template<typename T, int LE> T number(void* addr)
 {
@@ -427,8 +424,19 @@ class HashTable {
     typedef std::pair<WDLEntry*, DTZEntry*> EntryPair;
     typedef std::pair<Key, EntryPair> Entry;
 
+#ifdef ANTI
+    static const int TBHASHBITS = 12;
+#else
     static const int TBHASHBITS = 10;
+#endif
+
+#if defined(ANTI)
+    static const int HSHMAX     = 12;
+#elif defined(ATOMIC)
+    static const int HSHMAX     = 8;
+#else
     static const int HSHMAX     = 5;
+#endif
 
     Entry hashTable[1 << TBHASHBITS][HSHMAX];
 
@@ -1121,7 +1129,7 @@ T do_probe_table(const Position& pos,  Entry* entry, WDLScore wdl, ProbeState* r
         idx = MultIdx[d->groupLen[0] - 1][Triangle[squares[0]]];
 
         for (int i = 1; i < d->groupLen[0]; ++i)
-            idx += Binomial[i - 1][MultTwist[squares[i]]];
+            idx += Binomial[i][MultTwist[squares[i]]];
     }
 
 encode_remaining:
@@ -1375,8 +1383,14 @@ void do_init(Entry& e, T& p, uint8_t* data) {
     data += (uintptr_t)data & 1; // Word alignment
 
     for (File f = FILE_A; f <= MaxFile; ++f)
-        for (int i = 0; i < Sides; i++)
+        for (int i = 0; i < Sides; i++) {
             data = set_sizes(item(p, i, f).precomp, data);
+
+#ifdef ANTI
+            if (!IsWDL && e.variant == ANTI_VARIANT && item(p, i, f).precomp->flags & TBFlag::SingleValue)
+                item(p, i, f).precomp->minSymLen = 1;
+#endif
+        }
 
     if (!IsWDL)
         data = set_dtz_map(e, p, data, MaxFile);
@@ -1484,8 +1498,32 @@ void* init(Entry& e, const Position& pos) {
            + (IsWDL ? WdlSuffixes[e.variant] : DtzSuffixes[e.variant]);
 
     uint8_t* data = TBFile(fname).map(&e.baseAddress, &e.mapping, TB_MAGIC[e.variant][IsWDL]);
-    if (data)
+    if (data) {
         e.hasPawns ? do_init(e, e.pawnTable, data) : do_init(e, e.pieceTable, data);
+
+#ifdef ANTI
+        if (!e.hasPawns) {
+            // Recalculate table key.
+            std::string w2, b2;
+            for (int i = 0; i < e.pieceCount; i++) {
+                Piece piece = item(e.pieceTable, WHITE, FILE_A).precomp->pieces[i];
+                if (color_of(piece) == WHITE)
+                    w2 += PieceToChar[type_of(piece)];
+                else
+                    b2 += PieceToChar[type_of(piece)];
+            }
+
+            Position pos2;
+            StateInfo st;
+            Key key = pos2.set(w2 + "v" + b2, WHITE, pos.variant(), &st).material_key();
+
+            if (key != e.key)
+                std::swap(e.key, e.key2);
+
+            assert(e.key == key);
+        }
+#endif
+    }
 
     e.ready.store(true, std::memory_order_release);
     return e.baseAddress;
@@ -1522,6 +1560,94 @@ T probe_table(const Position& pos, ProbeState* result, WDLScore wdl = WDLDraw) {
     return do_probe_table(pos, entry, wdl, result);
 }
 
+#ifdef ANTI
+template <bool Threats = false>
+WDLScore sprobe_ab(Position &pos, WDLScore alpha, WDLScore beta, ProbeState* result);
+
+WDLScore sprobe_captures(Position &pos, WDLScore alpha, WDLScore beta, ProbeState* result) {
+
+    auto moveList = MoveList<CAPTURES>(pos);
+    StateInfo st;
+
+    *result = OK;
+
+    for (const Move& move : moveList) {
+        pos.do_move(move, st);
+        WDLScore v = -sprobe_ab(pos, -beta, -alpha, result);
+        pos.undo_move(move);
+
+        if (*result == FAIL)
+            return WDLDraw;
+
+        if (v > alpha) {
+            alpha = v;
+            if (alpha >= beta)
+                break;
+        }
+    }
+
+    if (moveList.size())
+        *result = ZEROING_BEST_MOVE;
+
+    return alpha;
+}
+
+template<bool Threats>
+WDLScore sprobe_ab(Position &pos, WDLScore alpha, WDLScore beta, ProbeState* result) {
+
+    WDLScore v;
+    bool threatFound = false;
+
+    if (popcount(pos.pieces(~pos.side_to_move())) > 1) {
+        v = sprobe_captures(pos, alpha, beta, result);
+        if (*result == ZEROING_BEST_MOVE || *result == FAIL)
+            return v;
+    } else {
+        auto moveList = MoveList<CAPTURES>(pos);
+        if (moveList.size()) {
+            *result = ZEROING_BEST_MOVE;
+            return WDLLoss;
+        }
+    }
+
+    if (Threats || popcount(pos.pieces()) >= 6) {
+        StateInfo st;
+        auto moveList = MoveList<LEGAL>(pos);
+
+        for (const Move& move : moveList) {
+            pos.do_move(move, st);
+            v = -sprobe_captures(pos, -beta, -alpha, result);
+            pos.undo_move(move);
+
+            if (*result == FAIL)
+                return WDLDraw;
+            else if (*result == ZEROING_BEST_MOVE && v > alpha) {
+                threatFound = true;
+                alpha = v;
+                if (alpha >= beta) {
+                    *result = THREAT;
+                    return v;
+                }
+            }
+        }
+    }
+
+    *result = OK;
+    v = probe_table<WDLEntry>(pos, result);
+
+    if (*result == FAIL)
+        return WDLDraw;
+
+    if (v > alpha)
+        return v;
+
+    if (threatFound)
+        *result = THREAT;
+
+    return alpha;
+}
+#endif
+
 // For a position where the side to move has a winning capture it is not necessary
 // to store a winning value so the generator treats such positions as "don't cares"
 // and tries to assign to it a value that improves the compression ratio. Similarly,
@@ -1537,6 +1663,12 @@ T probe_table(const Position& pos, ProbeState* result, WDLScore wdl = WDLDraw) {
 // the state to ZEROING_BEST_MOVE.
 template<bool CheckZeroingMoves = false>
 WDLScore search(Position& pos, ProbeState* result) {
+
+#ifdef ANTI
+    if (pos.is_anti()) {
+        return sprobe_ab<CheckZeroingMoves>(pos, WDLLoss, WDLWin, result);
+    }
+#endif
 
     WDLScore value, bestValue = WDLLoss;
     StateInfo st;
@@ -1669,7 +1801,7 @@ void Tablebases::init(const std::string& paths, Variant variant) {
         int s = 0;
         for (int j = 0; j < 10; j++) {
             MultIdx[i][j] = s;
-            s += (i == 0) ? 1 : Binomial[i - 1][MultTwist[InvTriangle[j]]];
+            s += (i == 0) ? 1 : Binomial[i][MultTwist[InvTriangle[j]]];
         }
         MultFactor[i] = s;
     }
@@ -1715,41 +1847,19 @@ void Tablebases::init(const std::string& paths, Variant variant) {
 #ifdef ANTI
     if (variant == ANTI_VARIANT) {
         for (PieceType p1 = PAWN; p1 <= KING; ++p1) {
-            for (PieceType p2 = p1; p2 <= KING; ++p2) {
+            for (PieceType p2 = PAWN; p2 <= p1; ++p2) {
                 EntryTable.insert({p1}, {p2}, variant);
 
                 for (PieceType p3 = PAWN; p3 <= KING; ++p3)
                     EntryTable.insert({p1, p2}, {p3}, variant);
 
-                for (PieceType p3 = p2; p3 <= KING; ++p3) {
-                    for (PieceType p4 = PAWN; p4 <= KING; ++p4) {
+                for (PieceType p3 = PAWN; p3 <= p2; ++p3) {
+                    for (PieceType p4 = PAWN; p4 <= KING; ++p4)
                         EntryTable.insert({p1, p2, p3}, {p4}, variant);
-
-                        for (PieceType p5 = p4; p5 <= KING; ++p5)
-                            EntryTable.insert({p1, p2, p3}, {p4, p5}, variant);
-                    }
-
-                    for (PieceType p4 = p3; p4 <= KING; ++p4) {
-                        for (PieceType p5 = PAWN; p5 <= KING; ++p5) {
-                            EntryTable.insert({p1, p2, p3, p4}, {p5}, variant);
-
-                            for (PieceType p6 = p5; p6 <= KING; ++p6)
-                                EntryTable.insert({p1, p2, p3, p4}, {p5, p6}, variant);
-                        }
-
-                        for (PieceType p5 = p4; p5 <= KING; ++p5)
-                            for (PieceType p6 = PAWN; p6 <= KING; ++p6)
-                                EntryTable.insert({p1, p2, p3, p4, p5}, {p6}, variant);
-                    }
-
-                    for (PieceType p4 = p1; p4 <= KING; ++p4)
-                        for (PieceType p5 = (p1 == p4) ? p2 : p4; p5 <= KING; ++p5)
-                            for (PieceType p6 = (p1 == p4 && p5 == p4) ? p3 : p5; p6 <= KING; ++p6)
-                                EntryTable.insert({p1, p2, p3}, {p4, p5, p6}, variant);
                 }
 
-                for (PieceType p3 = p1; p3 <= KING; ++p3)
-                    for (PieceType p4 = (p1 == p3) ? p2 : p3; p4 <= KING; ++p4)
+                for (PieceType p3 = PAWN; p3 <= p1; ++p3)
+                    for (PieceType p4 = PAWN; p4 <= (p1 == p3 ? p2 : p3); ++p4)
                         EntryTable.insert({p1, p2}, {p3, p4}, variant);
             }
         }
@@ -1836,6 +1946,14 @@ int Tablebases::probe_dtz(Position& pos, ProbeState* result) {
     // one as in case the best move is a losing ep, so it cannot be probed.
     if (*result == ZEROING_BEST_MOVE)
         return dtz_before_zeroing(wdl);
+
+#ifdef ANTI
+    if (pos.pieces(pos.side_to_move()) == pos.pieces(pos.side_to_move(), PAWN))
+        return dtz_before_zeroing(wdl);
+
+    if (*result == THREAT && wdl > WDLDraw)
+        return wdl == WDLWin ? 2 : 102;
+#endif
 
     int dtz = probe_table<DTZEntry>(pos, result, wdl);
 
