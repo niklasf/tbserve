@@ -29,6 +29,7 @@ Finally:
 cd src
 make -f Makefile.regular ARCH=x86-64-modern build
 make -f Makefile.atomic -B ARCH=x86-64-modern build
+make -f Makefile.giveaway -B ARCH=x86-64-modern build
 ```
 
 Downloading tablebases
@@ -36,8 +37,8 @@ Downloading tablebases
 
 Via BitTorrent: http://oics.olympuschess.com/tracker/index.php
 
-Atomic Syzygy tables are not beeing widely distributed, so they probably
-have to be [generated](https://github.com/syzygy1/tb).
+Atomic and Suicide/giveaway tables are not beeing widely distributed, so they
+probably have to be [generated](https://github.com/syzygy1/tb).
 
 Usage
 -----
@@ -48,6 +49,9 @@ Usage
     --gaviota path/to/another-dir
 
 ./atbserve [--verbose] [--cors] [--port 5000]
+    --syzygy path/to/another/dir
+
+./gtbserve [--verbose] [--cors] [--port 5000]
     --syzygy path/to/another/dir
 ```
 
