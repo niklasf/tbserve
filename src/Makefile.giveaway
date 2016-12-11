@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-MAKE += -f Makefile.regular
-
+MAKE += -f Makefile.giveaway
 
 ### ==========================================================================
 ### Section 1. General Configuration
@@ -30,7 +29,7 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-EXE = rtbserve
+EXE = gtbserve
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -143,7 +142,7 @@ endif
 
 CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -fno-rtti -std=c++11 $(EXTRACXXFLAGS)
 DEPENDFLAGS += -std=c++11
-LDFLAGS += -levent -lgtb $(EXTRALDFLAGS)
+LDFLAGS += -levent $(EXTRALDFLAGS)
 
 ifeq ($(COMP),)
 	COMP=gcc
@@ -254,7 +253,7 @@ ifneq ($(comp),mingw)
 endif
 
 ### 3.2.1 Debugging
-CXXFLAGS += -DTABLEBASE_VARIANT=CHESS_VARIANT -DGAVIOTA
+CXXFLAGS += -DANTI -DTABLEBASE_VARIANT=ANTI_VARIANT
 ifeq ($(debug),no)
 	CXXFLAGS += -DNDEBUG
 else
