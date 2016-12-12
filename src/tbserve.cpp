@@ -241,6 +241,9 @@ bool insufficient_material<CHESS_VARIANT>(const Position &pos) {
 #ifdef ATOMIC
 template<>
 bool insufficient_material<ATOMIC_VARIANT>(const Position &pos) {
+  // King already dead.
+  if (pos.is_atomic_win() || pos.is_atomic_loss()) return false;
+
   // Sometimes sufficient mating material
   if (pos.pieces(PAWN) || pos.pieces(QUEEN)) return false;
 
