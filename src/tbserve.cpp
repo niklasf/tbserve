@@ -500,7 +500,7 @@ void get_api(struct evhttp_request *req, void *) {
       info.insufficient_material = insufficient_material<TABLEBASE_VARIANT>(pos);
       info.zeroing = pos.rule50_count() == 0;
 
-      if (info.checkmate) info.san += '#';
+      if (info.checkmate || info.variant_win || info.variant_loss) info.san += '#';
       else if (pos.checkers()) info.san += '+';
 
       if (info.checkmate || info.variant_loss) {
