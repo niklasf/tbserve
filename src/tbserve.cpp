@@ -269,6 +269,8 @@ struct MoveInfo {
 
   bool insufficient_material;
   bool checkmate;
+  bool variant_win;
+  bool variant_loss;
   bool stalemate;
   bool zeroing;
 
@@ -288,6 +290,8 @@ bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
 
   if (a.has_wdl && b.has_wdl && a.wdl != b.wdl) return a.wdl < b.wdl;
   if (a.checkmate != b.checkmate) return a.checkmate;
+  if (a.variant_loss != b.variant_loss) return a.variant_loss;
+  if (a.variant_win != b.variant_win) return b.variant_win;
   if (a.stalemate != b.stalemate) return a.stalemate;
   if (a.insufficient_material != b.insufficient_material) return a.insufficient_material;
 
@@ -451,17 +455,25 @@ void get_api(struct evhttp_request *req, void *) {
       evbuffer_add_printf(res, "%s(", jsonp);
   }
 
-#if defined(ATOMIC)
-  bool checkmate = legals.size() == 0 && (pos.checkers() || pos.is_atomic_loss());
-#elif defined(ANTI)
-  bool checkmate = pos.is_anti_loss() || pos.is_anti_win();
-#else
   bool checkmate = legals.size() == 0 && pos.checkers();
+  bool variant_win = false;
+  bool variant_loss = false;
+
+#if defined(ATOMIC)
+  variant_win = pos.is_atomic_win();
+  variant_loss = pos.is_atomic_loss();
+#elif defined(ANTI)
+  variant_win = legals.size() == 0 || pos.is_anti_win();
+  variant_loss = pos.is_anti_loss();
 #endif
+
+  bool stalemate = legals.size() == 0 && !checkmate && !variant_win && !variant_loss;
 
   evbuffer_add_printf(res, "{\n");
   evbuffer_add_printf(res, "  \"checkmate\": %s,\n", checkmate ? "true" : "false");
-  evbuffer_add_printf(res, "  \"stalemate\": %s,\n", (legals.size() == 0 && !checkmate) ? "true": "false");
+  evbuffer_add_printf(res, "  \"stalemate\": %s,\n", stalemate ? "true": "false");
+  evbuffer_add_printf(res, "  \"variant_win\": %s,\n", variant_win ? "true": "false");
+  evbuffer_add_printf(res, "  \"variant_loss\": %s,\n", variant_loss ? "true": "false");
   evbuffer_add_printf(res, "  \"moves\": [\n");
 
   std::vector<MoveInfo> move_infos;
@@ -475,23 +487,30 @@ void get_api(struct evhttp_request *req, void *) {
 
       pos.do_move(m, *st++);
       int num_moves = MoveList<LEGAL>(pos).size();
-#if defined(ATOMIC)
-      info.checkmate = num_moves == 0 && (pos.checkers() || pos.is_atomic_loss());
-#elif defined(ANTI)
-      info.checkmate = pos.is_anti_win() || num_moves == 0;
-#else
+
       info.checkmate = num_moves == 0 && pos.checkers();
+#if defined(ATOMIC)
+      info.variant_win = pos.is_atomic_win();
+      info.variant_loss = pos.is_atomic_loss();
+#elif defined(ANTI)
+      info.variant_win = num_moves == 0 || pos.is_anti_win();
+      info.variant_loss = pos.is_anti_loss();
 #endif
-      info.stalemate = num_moves == 0 && !checkmate;
+      info.stalemate = num_moves == 0 && !info.checkmate && !info.variant_win && !info.variant_loss;
       info.insufficient_material = insufficient_material<TABLEBASE_VARIANT>(pos);
       info.zeroing = pos.rule50_count() == 0;
 
       if (info.checkmate) info.san += '#';
       else if (pos.checkers()) info.san += '+';
 
-      if (info.checkmate) {
+      if (info.checkmate || info.variant_loss) {
           info.has_wdl = true;
           info.wdl = -2;
+          info.has_dtm = true;
+          info.dtm = 0;
+      } else if (info.variant_win) {
+          info.has_wdl = true;
+          info.wdl = 2;
           info.has_dtm = true;
           info.dtm = 0;
       } else if (info.stalemate || info.insufficient_material) {
@@ -531,10 +550,12 @@ skip_moves:
   for (size_t i = 0; i < move_infos.size(); i++) {
       const MoveInfo &m = move_infos[i];
 
-      evbuffer_add_printf(res, "    {\"uci\": \"%s\", \"san\": \"%s\", \"checkmate\": %s, \"stalemate\": %s, \"insufficient_material\": %s, \"zeroing\": %s, ",
+      evbuffer_add_printf(res, "    {\"uci\": \"%s\", \"san\": \"%s\", \"checkmate\": %s, \"stalemate\": %s, \"variant_win\": %s, \"variant_loss\": %s, \"insufficient_material\": %s, \"zeroing\": %s, ",
                           m.uci.c_str(), m.san.c_str(),
                           m.checkmate ? "true" : "false",
                           m.stalemate ? "true": "false",
+                          m.variant_win ? "true": "false",
+                          m.variant_loss ? "true": "false",
                           m.insufficient_material ? "true": "false",
                           m.zeroing ? "true": "false");
 
