@@ -478,7 +478,7 @@ void get_api(struct evhttp_request *req, void *) {
 #if defined(ATOMIC)
       info.checkmate = num_moves == 0 && (pos.checkers() || pos.is_atomic_loss());
 #elif defined(ANTI)
-      info.checkmate = pos.is_anti_win();
+      info.checkmate = pos.is_anti_win() || num_moves == 0;
 #else
       info.checkmate = num_moves == 0 && pos.checkers();
 #endif
