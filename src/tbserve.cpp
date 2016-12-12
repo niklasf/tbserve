@@ -454,7 +454,7 @@ void get_api(struct evhttp_request *req, void *) {
 #if defined(ATOMIC)
   bool checkmate = legals.size() == 0 && (pos.checkers() || pos.is_atomic_loss());
 #elif defined(ANTI)
-  bool checkmate = pos.is_anti_win();
+  bool checkmate = pos.is_anti_loss() || pos.is_anti_win();
 #else
   bool checkmate = legals.size() == 0 && pos.checkers();
 #endif
@@ -465,6 +465,8 @@ void get_api(struct evhttp_request *req, void *) {
   evbuffer_add_printf(res, "  \"moves\": [\n");
 
   std::vector<MoveInfo> move_infos;
+
+  if (checkmate) goto skip_moves;
 
   for (const auto& m : legals) {
       MoveInfo info = {};
@@ -523,6 +525,8 @@ void get_api(struct evhttp_request *req, void *) {
   }
 
   sort(move_infos.begin(), move_infos.end(), compare_move_info);
+
+skip_moves:
 
   for (size_t i = 0; i < move_infos.size(); i++) {
       const MoveInfo &m = move_infos[i];
