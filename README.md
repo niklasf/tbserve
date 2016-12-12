@@ -74,17 +74,19 @@ name | type | default | description
 {
   "checkmate": false,
   "stalemate": false,
+  "variant_win": false,
+  "variant_loss": false,
   "moves": [
-    {"uci": "c2c1n", "san": "c1=N+", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": true, "wdl": 1, "dtz": 109, "dtm": 133},
-    {"uci": "c2c1r", "san": "c1=R", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": true, "wdl": 2, "dtz": 3, "dtm": 39},
-    {"uci": "c2c1b", "san": "c1=B", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": true, "wdl": 2, "dtz": 2, "dtm": 39},
-    {"uci": "c2c1q", "san": "c1=Q", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": true, "wdl": 2, "dtz": 2, "dtm": 39},
-    {"uci": "d2d3", "san": "Kd3", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 3, "dtm": 35},
-    {"uci": "d2c1", "san": "Kc1", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 5, "dtm": 31},
-    {"uci": "d2d1", "san": "Kd1", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 3, "dtm": 31},
-    {"uci": "d2e1", "san": "Ke1", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 1, "dtm": 31},
-    {"uci": "d2e2", "san": "Ke2", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 1, "dtm": 31},
-    {"uci": "d2e3", "san": "Ke3", "checkmate": false, "stalemate": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 1, "dtm": 31}
+    {"uci": "c2c1n", "san": "c1=N+", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": true, "wdl": 1, "dtz": 109, "dtm": 133},
+    {"uci": "c2c1r", "san": "c1=R", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": true, "wdl": 2, "dtz": 3, "dtm": 39},
+    {"uci": "c2c1b", "san": "c1=B", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": true, "wdl": 2, "dtz": 2, "dtm": 39},
+    {"uci": "c2c1q", "san": "c1=Q", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": true, "wdl": 2, "dtz": 2, "dtm": 39},
+    {"uci": "d2d3", "san": "Kd3", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 3, "dtm": 35},
+    {"uci": "d2c1", "san": "Kc1", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 5, "dtm": 31},
+    {"uci": "d2d1", "san": "Kd1", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 3, "dtm": 31},
+    {"uci": "d2e1", "san": "Ke1", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 1, "dtm": 31},
+    {"uci": "d2e2", "san": "Ke2", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 1, "dtm": 31},
+    {"uci": "d2e3", "san": "Ke3", "checkmate": false, "stalemate": false, "variant_win": false, "variant_loss": false, "insufficient_material": false, "zeroing": false, "wdl": 2, "dtz": 1, "dtm": 31}
   ]
 }
 ```
