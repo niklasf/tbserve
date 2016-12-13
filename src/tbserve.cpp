@@ -292,9 +292,9 @@ bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
   if (a.has_wdl != b.has_wdl) return b.has_wdl;
 
   if (a.has_wdl && b.has_wdl && a.wdl != b.wdl) return a.wdl < b.wdl;
-  if (a.checkmate != b.checkmate) return a.checkmate;
-  if (a.variant_loss != b.variant_loss) return a.variant_loss;
-  if (a.variant_win != b.variant_win) return b.variant_win;
+  if (a.checkmate != b.checkmate) return b.checkmate;
+  if (a.variant_loss != b.variant_loss) return b.variant_loss;
+  if (a.variant_win != b.variant_win) return a.variant_win;
   if (a.stalemate != b.stalemate) return a.stalemate;
   if (a.insufficient_material != b.insufficient_material) return a.insufficient_material;
 
@@ -509,13 +509,11 @@ void get_api(struct evhttp_request *req, void *) {
       if (info.checkmate || info.variant_loss) {
           info.has_wdl = true;
           info.wdl = -2;
-          info.has_dtm = true;
+          info.has_dtm = info.checkmate;
           info.dtm = 0;
       } else if (info.variant_win) {
           info.has_wdl = true;
           info.wdl = 2;
-          info.has_dtm = true;
-          info.dtm = 0;
       } else if (info.stalemate || info.insufficient_material) {
           info.has_wdl = true;
           info.wdl = 0;
