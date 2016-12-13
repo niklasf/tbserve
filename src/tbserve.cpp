@@ -288,9 +288,6 @@ struct MoveInfo {
 };
 
 bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
-  if (a.has_dtz != b.has_dtz) return b.has_dtz;
-  if (a.has_wdl != b.has_wdl) return b.has_wdl;
-
   if (a.has_wdl && b.has_wdl && a.wdl != b.wdl) return a.wdl < b.wdl;
   if (a.checkmate != b.checkmate) return b.checkmate;
   if (a.variant_loss != b.variant_loss) return b.variant_loss;
@@ -304,6 +301,9 @@ bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
   if (a.has_wdl && b.has_wdl && a.wdl > 0 && a.zeroing != b.zeroing) return b.zeroing;
 
   if (a.has_dtz && b.has_dtz && a.dtz != b.dtz) return b.dtz < a.dtz;
+
+  if (a.has_dtz != b.has_dtz) return b.has_dtz;
+  if (a.has_wdl != b.has_wdl) return b.has_wdl;
 
   return a.uci.compare(b.uci) < 0;
 }
