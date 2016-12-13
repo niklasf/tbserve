@@ -289,9 +289,9 @@ struct MoveInfo {
 
 bool compare_move_info(const MoveInfo &a, const MoveInfo &b) {
   if (a.has_wdl && b.has_wdl && a.wdl != b.wdl) return a.wdl < b.wdl;
-  if (a.checkmate != b.checkmate) return b.checkmate;
-  if (a.variant_loss != b.variant_loss) return b.variant_loss;
-  if (a.variant_win != b.variant_win) return a.variant_win;
+  if (a.checkmate != b.checkmate) return a.checkmate;
+  if (a.variant_loss != b.variant_loss) return a.variant_loss;
+  if (a.variant_win != b.variant_win) return b.variant_win;
   if (a.stalemate != b.stalemate) return a.stalemate;
   if (a.insufficient_material != b.insufficient_material) return a.insufficient_material;
 
