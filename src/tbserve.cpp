@@ -611,7 +611,7 @@ int serve(int port) {
       return 1;
   }
 
-  std::cout << variants[TABLEBASE_VARIANT] << " tbserve listenning on http://127.0.0.1:" << port << " ..." << std::endl;
+  std::cout << variants[TABLEBASE_VARIANT] << " tbserve listening on http://127.0.0.1:" << port << " ..." << std::endl;
 
   return event_base_dispatch(base);
 }
