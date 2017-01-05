@@ -252,8 +252,19 @@ ifneq ($(comp),mingw)
 	endif
 endif
 
-### 3.2.1 Debugging
 CXXFLAGS += -DANTI -DTABLEBASE_VARIANT=ANTI_VARIANT
+ifneq (,$(filter -DLOOP,$(CXXFLAGS)))
+ifeq (,$(filter -DCRAZYHOUSE,$(CXXFLAGS)))
+$(error Crazyhouse (-DCRAZYHOUSE) is required for subvariant loop chess)
+endif
+endif
+ifneq (,$(filter -DSUICIDE,$(CXXFLAGS)))
+ifeq (,$(filter -DANTI,$(CXXFLAGS)))
+$(error Giveaway (-DANTI) is required for subvariant suicide chess)
+endif
+endif
+
+### 3.2.1 Debugging
 ifeq ($(debug),no)
 	CXXFLAGS += -DNDEBUG
 else

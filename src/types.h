@@ -110,6 +110,7 @@ const int MAX_MOVES = 256;
 const int MAX_PLY   = 128;
 
 enum Variant {
+  //main variants
   CHESS_VARIANT,
 #ifdef ANTI
   ANTI_VARIANT,
@@ -126,6 +127,9 @@ enum Variant {
 #ifdef KOTH
   KOTH_VARIANT,
 #endif
+#ifdef LOSERS
+  LOSERS_VARIANT,
+#endif
 #ifdef RACE
   RACE_VARIANT,
 #endif
@@ -135,34 +139,55 @@ enum Variant {
 #ifdef THREECHECK
   THREECHECK_VARIANT,
 #endif
-  VARIANT_NB
+  VARIANT_NB,
+  LAST_VARIANT = VARIANT_NB - 1,
+  //subvariants
+#ifdef SUICIDE
+  SUICIDE_VARIANT,
+#endif
+#ifdef LOOP
+  LOOP_VARIANT,
+#endif
+  SUBVARIANT_NB,
 };
 
 //static const constexpr char* variants[] doesn't play nicely with uci.h
-static std::vector<std::string> variants = {"chess"
+static std::vector<std::string> variants = {
+//main variants
+"chess",
 #ifdef ANTI
-,"giveaway"
+"giveaway",
 #endif
 #ifdef ATOMIC
-,"atomic"
+"atomic",
 #endif
 #ifdef CRAZYHOUSE
-,"crazyhouse"
+"crazyhouse",
 #endif
 #ifdef HORDE
-,"horde"
+"horde",
 #endif
 #ifdef KOTH
-,"kingofthehill"
+"kingofthehill",
+#endif
+#ifdef LOSERS
+"losers",
 #endif
 #ifdef RACE
-,"racingkings"
+"racingkings",
 #endif
 #ifdef RELAY
-,"relay"
+"relay",
 #endif
 #ifdef THREECHECK
-,"threecheck"
+"threecheck",
+#endif
+//subvariants
+#ifdef SUICIDE
+"suicide",
+#endif
+#ifdef LOOP
+"loop",
 #endif
 };
 
@@ -257,27 +282,31 @@ enum Value : int {
   VALUE_MATE_IN_MAX_PLY  =  VALUE_MATE - 2 * MAX_PLY,
   VALUE_MATED_IN_MAX_PLY = -VALUE_MATE + 2 * MAX_PLY,
 
+  TempoMg       = 0,     TempoEg       = 0,
   PawnValueMg   = 188,   PawnValueEg   = 248,
   KnightValueMg = 753,   KnightValueEg = 832,
   BishopValueMg = 826,   BishopValueEg = 897,
   RookValueMg   = 1285,  RookValueEg   = 1371,
   QueenValueMg  = 2513,  QueenValueEg  = 2650,
 #ifdef ANTI
-  PawnValueMgAnti   = -137,  PawnValueEgAnti   = -360,
-  KnightValueMgAnti = -130,  KnightValueEgAnti = -41,
-  BishopValueMgAnti = -322,  BishopValueEgAnti = -64,
-  RookValueMgAnti   = -496,  RookValueEgAnti   =  62,
-  QueenValueMgAnti  = -187,  QueenValueEgAnti  = -318,
-  KingValueMgAnti   = -20,   KingValueEgAnti   =  130,
+  TempoMgAnti       =  0,    TempoEgAnti       =  0,
+  PawnValueMgAnti   =  137,  PawnValueEgAnti   =  360,
+  KnightValueMgAnti =  130,  KnightValueEgAnti =  41,
+  BishopValueMgAnti =  322,  BishopValueEgAnti =  64,
+  RookValueMgAnti   =  496,  RookValueEgAnti   = -62,
+  QueenValueMgAnti  =  187,  QueenValueEgAnti  =  318,
+  KingValueMgAnti   =  20,   KingValueEgAnti   = -130,
 #endif
 #ifdef ATOMIC
-  PawnValueMgAtomic   = 332,   PawnValueEgAtomic   = 438,
-  KnightValueMgAtomic = 478,   KnightValueEgAtomic = 736,
-  BishopValueMgAtomic = 614,   BishopValueEgAtomic = 823,
-  RookValueMgAtomic   = 957,   RookValueEgAtomic   = 1278,
-  QueenValueMgAtomic  = 1904,  QueenValueEgAtomic  = 2918,
+  TempoMgAtomic       = 0,     TempoEgAtomic       = 0,
+  PawnValueMgAtomic   = 329,   PawnValueEgAtomic   = 437,
+  KnightValueMgAtomic = 476,   KnightValueEgAtomic = 732,
+  BishopValueMgAtomic = 622,   BishopValueEgAtomic = 774,
+  RookValueMgAtomic   = 921,   RookValueEgAtomic   = 1155,
+  QueenValueMgAtomic  = 1812,  QueenValueEgAtomic  = 2636,
 #endif
 #ifdef CRAZYHOUSE
+  TempoMgHouse       = 0,     TempoEgHouse       = 0,
   PawnValueMgHouse   = 174,   PawnValueEgHouse   = 259,
   KnightValueMgHouse = 445,   KnightValueEgHouse = 667,
   BishopValueMgHouse = 513,   BishopValueEgHouse = 690,
@@ -285,6 +314,7 @@ enum Value : int {
   QueenValueMgHouse  = 936,   QueenValueEgHouse  = 1222,
 #endif
 #ifdef HORDE
+  TempoMgHorde       = 0,     TempoEgHorde       = 0,
   PawnValueMgHorde   = 370,   PawnValueEgHorde   = 427,
   KnightValueMgHorde = 708,   KnightValueEgHorde = 851,
   BishopValueMgHorde = 736,   BishopValueEgHorde = 859,
@@ -292,13 +322,31 @@ enum Value : int {
   QueenValueMgHorde  = 2777,  QueenValueEgHorde  = 3182,
   KingValueMgHorde   = 2041,  KingValueEgHorde   = 975,
 #endif
+#ifdef KOTH
+  TempoMgHill       = 1,     TempoEgHill       = 1,
+  PawnValueMgHill   = 178,   PawnValueEgHill   = 252,
+  KnightValueMgHill = 734,   KnightValueEgHill = 818,
+  BishopValueMgHill = 859,   BishopValueEgHill = 883,
+  RookValueMgHill   = 1159,  RookValueEgHill   = 1289,
+  QueenValueMgHill  = 2396,  QueenValueEgHill  = 2610,
+#endif
+#ifdef LOSERS
+  TempoMgLosers       = 0,     TempoEgLosers       = 0,
+  PawnValueMgLosers   = -137,  PawnValueEgLosers   = -360,
+  KnightValueMgLosers = -130,  KnightValueEgLosers = -41,
+  BishopValueMgLosers = -322,  BishopValueEgLosers = -64,
+  RookValueMgLosers   = -496,  RookValueEgLosers   =  62,
+  QueenValueMgLosers  = -187,  QueenValueEgLosers  = -318,
+#endif
 #ifdef RACE
-  KnightValueMgRace = 720,   KnightValueEgRace = 801,
-  BishopValueMgRace = 904,   BishopValueEgRace = 929,
-  RookValueMgRace   = 1265,  RookValueEgRace  = 1731,
-  QueenValueMgRace  = 2198,  QueenValueEgRace = 2226,
+  TempoMgRace       = 0,     TempoEgRace       = 0,
+  KnightValueMgRace = 730,   KnightValueEgRace = 839,
+  BishopValueMgRace = 1006,  BishopValueEgRace = 1019,
+  RookValueMgRace   = 1274,  RookValueEgRace   = 1842,
+  QueenValueMgRace  = 2019,  QueenValueEgRace  = 2090,
 #endif
 #ifdef THREECHECK
+  TempoMgThreeCheck       = 0,     TempoEgThreeCheck       = 0,
   PawnValueMgThreeCheck   = 181,   PawnValueEgThreeCheck   = 245,
   KnightValueMgThreeCheck = 691,   KnightValueEgThreeCheck = 850,
   BishopValueMgThreeCheck = 829,   BishopValueEgThreeCheck = 845,
@@ -308,6 +356,7 @@ enum Value : int {
 
   MidgameLimit  = 15258, EndgameLimit  = 3915
 };
+extern Value TempoValue[VARIANT_NB][PHASE_NB];
 
 enum PieceType {
   NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
@@ -577,6 +626,25 @@ inline Piece dropped_piece(Move m) {
 
 inline bool is_ok(Move m) {
   return from_sq(m) != to_sq(m); // Catch MOVE_NULL and MOVE_NONE
+}
+
+inline Variant main_variant(Variant v) {
+  if (v < VARIANT_NB)
+      return v;
+  switch(v)
+  {
+#ifdef SUICIDE
+  case SUICIDE_VARIANT:
+      return ANTI_VARIANT;
+#endif
+#ifdef LOOP
+  case LOOP_VARIANT:
+      return CRAZYHOUSE_VARIANT;
+#endif
+  default:
+      assert(false);
+      return CHESS_VARIANT; // Silence a warning
+  }
 }
 
 #endif // #ifndef TYPES_H_INCLUDED
