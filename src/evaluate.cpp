@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -117,7 +117,8 @@ namespace {
 
   // MobilityBonus[PieceType][attacked] contains bonuses for middle and end
   // game, indexed by piece type and number of attacked squares in the MobilityArea.
-  const Score MobilityBonus[][32] = {
+  const Score MobilityBonus[VARIANT_NB][PIECE_TYPE_NB][32] = {
+    {
     {}, {},
     { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
       S( 22, 26), S( 30, 28), S( 36, 29) },
@@ -132,6 +133,169 @@ namespace {
       S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
       S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
       S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#ifdef ANTI
+    {
+      {}, {},
+      { S(-150,-152), S(-112,-108), S(-18,-52), S( -4,-20), S( 12, 10), S( 30, 22), // Knights
+        S(  44,  52), S(  60,  56), S( 72, 58) },
+      { S(-96,-116), S(-42,-38), S( 32, -4), S( 52, 24), S( 74, 44), S(102, 84), // Bishops
+        S(108, 108), S(126,116), S(130,126), S(142,140), S(158,148), S(162,172),
+        S(184, 180), S(194,188) },
+      { S(-112,-156), S(-50,-36), S(-22, 52), S(-10,110), S( -8,140), S( -2,162), // Rooks
+        S(  16, 218), S( 28,240), S( 42,256), S( 46,286), S( 62,308), S( 64,320),
+        S(  86, 330), S( 98,336), S(118,338) },
+      { S(-80,-70), S(-50,-24), S(  4, 14), S(  8, 38), S( 28, 74), S( 48,110), // Queens
+        S( 50,124), S( 80,152), S( 86,158), S( 94,174), S(108,188), S(112,204),
+        S(120,222), S(140,232), S(144,236), S(146,244), S(150,256), S(154,260),
+        S(170,266), S(188,272), S(198,280), S(216,314), S(224,316), S(226,322),
+        S(236,348), S(238,354), S(246,382), S(256,398) }
+    },
+#endif
+#ifdef ATOMIC
+    {
+      {}, {},
+      { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
+        S( 22, 26), S( 30, 28), S( 36, 29) },
+      { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S( 92, 90), S( 97, 94) },
+      { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S( 43,165), S( 49,168), S( 59,169) },
+      { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
+#ifdef CRAZYHOUSE
+    {
+      {}, {},
+      { S(-115,-112), S(-94,-51), S(-90,-24), S(-38, -5), S(  6,  5), S( 15, 11), // Knights
+        S(  22,  26), S( 30, 28), S( 36, 29) },
+      { S(-150, -63), S(-91,-41), S( 16, -8), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S(  54,  54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S(  92,  90), S( 97, 94) },
+      { S( -56, -78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(   8, 109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S(  43, 165), S( 49,168), S( 59,169) },
+      { S( -40, -35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S(  25,  62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S(  60, 111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S(  85, 133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S( 118, 174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
+#ifdef HORDE
+    {
+      {}, {},
+      { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
+        S( 22, 26), S( 30, 28), S( 36, 29) },
+      { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S( 92, 90), S( 97, 94) },
+      { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S( 43,165), S( 49,168), S( 59,169) },
+      { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
+#ifdef KOTH
+    {
+      {}, {},
+      { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
+        S( 22, 26), S( 30, 28), S( 36, 29) },
+      { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S( 92, 90), S( 97, 94) },
+      { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S( 43,165), S( 49,168), S( 59,169) },
+      { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
+#ifdef LOSERS
+    {
+      {}, {},
+      { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
+        S( 22, 26), S( 30, 28), S( 36, 29) },
+      { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S( 92, 90), S( 97, 94) },
+      { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S( 43,165), S( 49,168), S( 59,169) },
+      { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
+#ifdef RACE
+    {
+      {}, {},
+      { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
+        S( 22, 26), S( 30, 28), S( 36, 29) },
+      { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S( 92, 90), S( 97, 94) },
+      { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S( 43,165), S( 49,168), S( 59,169) },
+      { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
+#ifdef RELAY
+    {
+      {}, {},
+      { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
+        S( 22, 26), S( 30, 28), S( 36, 29) },
+      { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S( 92, 90), S( 97, 94) },
+      { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S( 43,165), S( 49,168), S( 59,169) },
+      { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
+#ifdef THREECHECK
+    {
+      {}, {},
+      { S(-75,-76), S(-56,-54), S( -9,-26), S( -2,-10), S(  6,  5), S( 15, 11), // Knights
+        S( 22, 26), S( 30, 28), S( 36, 29) },
+      { S(-48,-58), S(-21,-19), S( 16, -2), S( 26, 12), S( 37, 22), S( 51, 42), // Bishops
+        S( 54, 54), S( 63, 58), S( 65, 63), S( 71, 70), S( 79, 74), S( 81, 86),
+        S( 92, 90), S( 97, 94) },
+      { S(-56,-78), S(-25,-18), S(-11, 26), S( -5, 55), S( -4, 70), S( -1, 81), // Rooks
+        S(  8,109), S( 14,120), S( 21,128), S( 23,143), S( 31,154), S( 32,160),
+        S( 43,165), S( 49,168), S( 59,169) },
+      { S(-40,-35), S(-25,-12), S(  2,  7), S(  4, 19), S( 14, 37), S( 24, 55), // Queens
+        S( 25, 62), S( 40, 76), S( 43, 79), S( 47, 87), S( 54, 94), S( 56,102),
+        S( 60,111), S( 70,116), S( 72,118), S( 73,122), S( 75,128), S( 77,130),
+        S( 85,133), S( 94,136), S( 99,140), S(108,157), S(112,158), S(113,161),
+        S(118,174), S(119,177), S(123,191), S(128,199) }
+    },
+#endif
   };
 
   // Outpost[knight/bishop][supported by pawn] contains bonuses for knights and
@@ -366,6 +530,8 @@ namespace {
   const int BishopCheck       = 588;
   const int KnightCheck       = 924;
 
+  // Threshold for lazy evaluation
+  const Value LazyEval = Value(1500);
 
   // eval_init() initializes king and attack bitboards for a given color
   // adding pawn attacks. To be done at the beginning of the evaluation.
@@ -454,7 +620,7 @@ namespace {
             mob = popcount(b);
 #endif
 
-        mobility[Us] += MobilityBonus[Pt][mob];
+        mobility[Us] += MobilityBonus[pos.variant()][Pt][mob];
 
 #ifdef ANTI
         if (pos.is_anti())
@@ -713,7 +879,7 @@ namespace {
 
 #ifdef ATOMIC
     if (pos.is_atomic())
-        score -= popcount(ei.attackedBy[Us][KING] & pos.pieces()) * make_score(100, 100);
+        score -= make_score(100, 100) * popcount(ei.attackedBy[Us][KING] & pos.pieces());
 #endif
         // Compute the king danger score and subtract it from the evaluation
         if (kingDanger > 0)
@@ -800,7 +966,7 @@ namespace {
             }
             // If both colors attack pieces, increase penalty with piece count
             if (theyCapture)
-                score -= pos.count<ALL_PIECES>(Us) * PieceCountAnti;
+                score -= PieceCountAnti * pos.count<ALL_PIECES>(Us);
         }
         // Bonus if we threaten to force captures (ignoring possible discoveries)
         if (!weCapture || theyCapture)
@@ -814,8 +980,8 @@ namespace {
             Bitboard unprotectedPieceMoves = pieceMoves & ~ei.attackedBy2[Us];
             safeThreats = unprotectedPawnPushes | unprotectedPieceMoves;
 
-            score += popcount(ei.attackedBy[Them][ALL_PIECES] & threats) * ThreatsAnti[0];
-            score += popcount(ei.attackedBy[Them][ALL_PIECES] & safeThreats) * ThreatsAnti[1];
+            score += ThreatsAnti[0] * popcount(ei.attackedBy[Them][ALL_PIECES] & threats);
+            score += ThreatsAnti[1] * popcount(ei.attackedBy[Them][ALL_PIECES] & safeThreats);
         }
     }
     else
@@ -840,7 +1006,7 @@ namespace {
             }
             // If both colors attack pieces, increase penalty with piece count
             if (theyCapture)
-                score -= pos.count<ALL_PIECES>(Us) * PieceCountLosers;
+                score -= PieceCountLosers * pos.count<ALL_PIECES>(Us);
         }
         // Bonus if we threaten to force captures (ignoring possible discoveries)
         if (!weCapture || theyCapture)
@@ -854,8 +1020,8 @@ namespace {
             Bitboard unprotectedPieceMoves = pieceMoves & ~ei.attackedBy2[Us];
             safeThreats = unprotectedPawnPushes | unprotectedPieceMoves;
 
-            score += popcount(ei.attackedBy[Them][ALL_PIECES] & threats) * ThreatsLosers[0];
-            score += popcount(ei.attackedBy[Them][ALL_PIECES] & safeThreats) * ThreatsLosers[1];
+            score += ThreatsLosers[0] * popcount(ei.attackedBy[Them][ALL_PIECES] & threats);
+            score += ThreatsLosers[1] * popcount(ei.attackedBy[Them][ALL_PIECES] & safeThreats);
         }
     }
     else
@@ -1068,6 +1234,11 @@ namespace {
 #ifdef ANTI
             if (pos.is_anti()) {} else
 #endif
+#ifdef ATOMIC
+            if (pos.is_atomic())
+                ebonus +=  distance(pos.square<KING>(Them), blockSq) * 5 * rr;
+            else
+#endif
             {
             // Adjust bonus based on the king's proximity
             ebonus +=  distance(pos.square<KING>(Them), blockSq) * 5 * rr
@@ -1233,6 +1404,9 @@ namespace {
 
     // If we don't already have an unusual scale factor, check for certain
     // types of endgames, and use a lower scale for those.
+#ifdef ATOMIC
+    if (pos.is_atomic()) {} else
+#endif
     if (    ei.me->game_phase() < PHASE_MIDGAME
         && (sf == SCALE_FACTOR_NORMAL || sf == SCALE_FACTOR_ONEPAWN))
     {
@@ -1260,6 +1434,18 @@ namespace {
     return sf;
   }
 
+
+  Value lazy_eval(Value mg, Value eg) {
+
+    if (mg > LazyEval && eg > LazyEval)
+        return  LazyEval + ((mg + eg) / 2 - LazyEval) / 4;
+
+    else if (mg < -LazyEval && eg < -LazyEval)
+        return -LazyEval + ((mg + eg) / 2 + LazyEval) / 4;
+
+    return VALUE_ZERO;
+  }
+
 } // namespace
 
 /// evaluate() is the main evaluation function. It returns a static evaluation
@@ -1281,30 +1467,6 @@ Value Eval::evaluate(const Position& pos) {
 
   // If we have a specialized evaluation function for the current material
   // configuration, call it and return.
-#ifdef KOTH
-  if (pos.is_koth()) {} else
-#endif
-#ifdef LOSERS
-  if (pos.is_losers()) {} else
-#endif
-#ifdef RACE
-  if (pos.is_race()) {} else
-#endif
-#ifdef THREECHECK
-  if (pos.is_three_check()) {} else
-#endif
-#ifdef HORDE
-  if (pos.is_horde()) {} else
-#endif
-#ifdef ATOMIC
-  if (pos.is_atomic()) {} else
-#endif
-#ifdef ANTI
-  if (pos.is_anti()) {} else
-#endif
-#ifdef CRAZYHOUSE
-  if (pos.is_house()) {} else
-#endif
   if (ei.me->specialized_eval_exists())
       return ei.me->evaluate(pos);
 
@@ -1317,10 +1479,32 @@ Value Eval::evaluate(const Position& pos) {
   ei.pi = Pawns::probe(pos);
   score += ei.pi->pawns_score();
 
+  // We have taken into account all cheap evaluation terms.
+  // If score exceeds a threshold return a lazy evaluation.
+  Value lazy = lazy_eval(mg_value(score), eg_value(score));
+  if (pos.variant() == CHESS_VARIANT)
+  if (lazy)
+      return pos.side_to_move() == WHITE ? lazy : -lazy;
+
   // Initialize attack and king safety bitboards
   ei.attackedBy[WHITE][ALL_PIECES] = ei.attackedBy[BLACK][ALL_PIECES] = 0;
+#ifdef ANTI
+  if (pos.is_anti())
+  {
+      for (Color c = WHITE; c <= BLACK; ++c)
+      {
+          ei.attackedBy[c][KING] = 0;
+          Bitboard kings = pos.pieces(c, KING);
+          while (kings)
+              ei.attackedBy[c][KING] |= pos.attacks_from<KING>(pop_lsb(&kings));
+      }
+  }
+  else
+#endif
+  {
   ei.attackedBy[WHITE][KING] = pos.attacks_from<KING>(pos.square<KING>(WHITE));
   ei.attackedBy[BLACK][KING] = pos.attacks_from<KING>(pos.square<KING>(BLACK));
+  }
   eval_init<WHITE>(pos, ei);
   eval_init<BLACK>(pos, ei);
 
@@ -1339,11 +1523,6 @@ Value Eval::evaluate(const Position& pos) {
 
   // Evaluate all pieces but king and pawns
   score += evaluate_pieces<DoTrace>(pos, ei, mobility, mobilityArea);
-#ifdef ANTI
-  if (pos.is_anti())
-      score += 2 * (mobility[WHITE] - mobility[BLACK]);
-  else
-#endif
   score += mobility[WHITE] - mobility[BLACK];
 
 #ifdef ANTI

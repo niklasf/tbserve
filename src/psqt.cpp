@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,6 +22,36 @@
 
 #include "types.h"
 
+Value PhaseLimit[VARIANT_NB][PHASE_NB] = {
+  { MidgameLimit, EndgameLimit },
+#ifdef ANTI
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef ATOMIC
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef CRAZYHOUSE
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef HORDE
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef KOTH
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef LOSERS
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef RACE
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef RELAY
+  { MidgameLimit, EndgameLimit },
+#endif
+#ifdef THREECHECK
+  { MidgameLimit, EndgameLimit },
+#endif
+};
 Value TempoValue[VARIANT_NB][PHASE_NB] = {
   { TempoMg, TempoEg },
 #ifdef ANTI

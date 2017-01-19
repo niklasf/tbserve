@@ -253,6 +253,12 @@ ifneq ($(comp),mingw)
 endif
 
 CXXFLAGS += -DATOMIC -DTABLEBASE_VARIANT=ATOMIC_VARIANT
+
+ifneq (,$(filter -DBUGHOUSE,$(CXXFLAGS)))
+ifeq (,$(filter -DCRAZYHOUSE,$(CXXFLAGS)))
+$(error Crazyhouse (-DCRAZYHOUSE) is required for subvariant bughouse chess)
+endif
+endif
 ifneq (,$(filter -DLOOP,$(CXXFLAGS)))
 ifeq (,$(filter -DCRAZYHOUSE,$(CXXFLAGS)))
 $(error Crazyhouse (-DCRAZYHOUSE) is required for subvariant loop chess)
