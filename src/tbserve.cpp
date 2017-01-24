@@ -148,6 +148,7 @@ bool validate_fen(const char *fen) {
                   wk++;
                   break;
               case 'p': case 'P':
+                  if (rank == 7 || rank == 0) return false;
               case 'n': case 'N':
               case 'b': case 'B':
               case 'r': case 'R':
