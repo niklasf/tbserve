@@ -27,6 +27,7 @@
 #include <string>
 #include <algorithm>
 
+#include <string.h>
 #include <getopt.h>
 
 #include <event2/event.h>
@@ -715,7 +716,7 @@ int main(int argc, char* argv[]) {
   PSQT::init();
   Bitboards::init();
   Position::init();
-  Threads.init();
+  Threads.init(Options["Threads"]);
   Tablebases::init(syzygy_path, TABLEBASE_VARIANT);
 
   if (Tablebases::MaxCardinality < 3) {
