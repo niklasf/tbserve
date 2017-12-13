@@ -2148,7 +2148,7 @@ bool Position::pos_is_ok() const {
   {
       if ((sideToMove != WHITE && sideToMove != BLACK)
           || (ep_square() != SQ_NONE && relative_rank(sideToMove, ep_square()) != RANK_6))
-          assert(0 && "pos_is_ok: Default");
+          return false; // assert(0 && "pos_is_ok: Default");
   }
   else
 #endif
@@ -2157,7 +2157,7 @@ bool Position::pos_is_ok() const {
   {
       if ((sideToMove != WHITE && sideToMove != BLACK)
           || (ep_square() != SQ_NONE && relative_rank(sideToMove, ep_square()) != RANK_6))
-          assert(0 && "pos_is_ok: Default");
+          return false; // assert(0 && "pos_is_ok: Default");
   }
   else
 #endif
@@ -2168,7 +2168,7 @@ bool Position::pos_is_ok() const {
           || (is_horde_color(WHITE) ? wksq != SQ_NONE : piece_on(wksq) != W_KING)
           || (is_horde_color(BLACK) ? bksq != SQ_NONE : piece_on(bksq) != B_KING)
           || (ep_square() != SQ_NONE && relative_rank(sideToMove, ep_square()) < RANK_6))
-          assert(0 && "pos_is_ok: Default");
+          return false; // assert(0 && "pos_is_ok: Default");
   }
   else
 #endif
@@ -2186,7 +2186,7 @@ bool Position::pos_is_ok() const {
 #endif
       || (   ep_square() != SQ_NONE
           && relative_rank(sideToMove, ep_square()) != RANK_6))
-      assert(0 && "pos_is_ok: Default");
+      return false; // assert(0 && "pos_is_ok: Default");
 
   if (Fast)
       return true;
@@ -2203,7 +2203,7 @@ bool Position::pos_is_ok() const {
       if (   std::count(board, board + SQUARE_NB, W_KING) +
              std::count(board, board + SQUARE_NB, B_KING) != 1
           || (is_horde_color(sideToMove) && attackers_to(square<KING>(~sideToMove)) & pieces(sideToMove)))
-      assert(0 && "pos_is_ok: Kings (horde)");
+      return false; // assert(0 && "pos_is_ok: Kings (horde)");
   } else
 #endif
 #ifdef ATOMIC
@@ -2211,7 +2211,7 @@ bool Position::pos_is_ok() const {
   {
       if (std::count(board, board + SQUARE_NB, W_KING) +
           std::count(board, board + SQUARE_NB, B_KING) != 1)
-      assert(0 && "pos_is_ok: Kings (atomic)");
+      return false; // assert(0 && "pos_is_ok: Kings (atomic)");
   }
   else if (is_atomic() && kings_adjacent())
   {
@@ -2223,14 +2223,14 @@ bool Position::pos_is_ok() const {
       if (   pieceCount[W_KING] < 1
           || pieceCount[B_KING] < 1
           || attackers_to(royal_king(~sideToMove)) & pieces(sideToMove))
-          assert(0 && "pos_is_ok: Kings (two kings)");
+          return false; // assert(0 && "pos_is_ok: Kings (two kings)");
   }
   else
 #endif
   if (   pieceCount[W_KING] != 1
       || pieceCount[B_KING] != 1
       || attackers_to(square<KING>(~sideToMove)) & pieces(sideToMove))
-      assert(0 && "pos_is_ok: Kings");
+      return false; // assert(0 && "pos_is_ok: Kings");
 
 #ifdef CRAZYHOUSE
   if (is_house())
@@ -2238,7 +2238,7 @@ bool Position::pos_is_ok() const {
       if (   (pieces(PAWN) & (Rank1BB | Rank8BB))
           || pieceCount[W_PAWN] > 16
           || pieceCount[B_PAWN] > 16)
-      assert(0 && "pos_is_ok: Pawns (crazyhouse)");
+      return false; // assert(0 && "pos_is_ok: Pawns (crazyhouse)");
   }
   else
 #endif
@@ -2246,14 +2246,14 @@ bool Position::pos_is_ok() const {
   if (is_horde())
   {
       if (pieces(PAWN) & (is_horde_color(WHITE) ? Rank8BB : Rank1BB))
-          assert(0 && "pos_is_ok: Pawns (horde)");
+          return false; // assert(0 && "pos_is_ok: Pawns (horde)");
   }
   else
 #endif
   if (   (pieces(PAWN) & (Rank1BB | Rank8BB))
       || pieceCount[W_PAWN] > 8
       || pieceCount[B_PAWN] > 8)
-      assert(0 && "pos_is_ok: Pawns");
+      return false; // assert(0 && "pos_is_ok: Pawns");
 
 #ifdef CRAZYHOUSE
   if (is_house())
@@ -2262,7 +2262,7 @@ bool Position::pos_is_ok() const {
           || (pieces(WHITE) | pieces(BLACK)) != pieces()
           || popcount(pieces(WHITE)) > 32
           || popcount(pieces(BLACK)) > 32)
-          assert(0 && "pos_is_ok: Bitboards (crazyhouse)");
+          return false; // assert(0 && "pos_is_ok: Bitboards (crazyhouse)");
   }
   else
 #endif
@@ -2273,7 +2273,7 @@ bool Position::pos_is_ok() const {
           || (pieces(WHITE) | pieces(BLACK)) != pieces()
           || popcount(pieces(WHITE)) > (is_horde_color(WHITE) ? 40 : 16)
           || popcount(pieces(BLACK)) > (is_horde_color(BLACK) ? 40 : 16))
-          assert(0 && "pos_is_ok: Bitboards (horde)");
+          return false; // assert(0 && "pos_is_ok: Bitboards (horde)");
   }
   else
 #endif
@@ -2281,35 +2281,35 @@ bool Position::pos_is_ok() const {
       || (pieces(WHITE) | pieces(BLACK)) != pieces()
       || popcount(pieces(WHITE)) > 16
       || popcount(pieces(BLACK)) > 16)
-      assert(0 && "pos_is_ok: Bitboards");
+      return false; // assert(0 && "pos_is_ok: Bitboards");
 
   for (PieceType p1 = PAWN; p1 <= KING; ++p1)
       for (PieceType p2 = PAWN; p2 <= KING; ++p2)
           if (p1 != p2 && (pieces(p1) & pieces(p2)))
-              assert(0 && "pos_is_ok: Bitboards");
+              return false; // assert(0 && "pos_is_ok: Bitboards");
 
   StateInfo si = *st;
   set_state(&si);
   if (std::memcmp(&si, st, sizeof(StateInfo)))
-      assert(0 && "pos_is_ok: State");
+      return false; // assert(0 && "pos_is_ok: State");
 #ifdef ANTI
   if (is_anti() && st->checkersBB)
-      assert(0 && "pos_is_ok: Checkers (antichess)");
+      return false; // assert(0 && "pos_is_ok: Checkers (antichess)");
 #endif
 #ifdef EXTINCTION
   if (is_extinction() && st->checkersBB)
-      assert(0 && "pos_is_ok: Checkers (extinction)");
+      return false; // assert(0 && "pos_is_ok: Checkers (extinction)");
 #endif
 
   for (Piece pc : Pieces)
   {
       if (   pieceCount[pc] != popcount(pieces(color_of(pc), type_of(pc)))
           || pieceCount[pc] != std::count(board, board + SQUARE_NB, pc))
-          assert(0 && "pos_is_ok: Pieces");
+          return false; // assert(0 && "pos_is_ok: Pieces");
 
       for (int i = 0; i < pieceCount[pc]; ++i)
           if (board[pieceList[pc][i]] != pc || index[pieceList[pc][i]] != i)
-              assert(0 && "pos_is_ok: Index");
+              return false; // assert(0 && "pos_is_ok: Index");
   }
 
   for (Color c = WHITE; c <= BLACK; ++c)
@@ -2328,7 +2328,7 @@ bool Position::pos_is_ok() const {
               || castlingRightsMask[castlingRookSquare[c | s]] != (c | s)
               || (castlingRightsMask[square<KING>(c)] & (c | s)) != (c | s))
 #endif
-              assert(0 && "pos_is_ok: Castling");
+              return false; // assert(0 && "pos_is_ok: Castling");
       }
 
   return true;
