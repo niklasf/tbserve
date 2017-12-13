@@ -60,6 +60,7 @@ public:
   explicit Thread(size_t);
   virtual ~Thread();
   virtual void search();
+  void clear();
   void idle_loop();
   void start_searching();
   void wait_for_search_finished();
@@ -76,6 +77,7 @@ public:
   Depth rootDepth, completedDepth;
   CounterMoveHistory counterMoves;
   ButterflyHistory mainHistory;
+  CapturePieceToHistory captureHistory;
   ContinuationHistory contHistory;
 };
 
@@ -89,8 +91,8 @@ struct MainThread : public Thread {
   void search() override;
   void check_time();
 
-  bool easyMovePlayed, failedLow;
-  double bestMoveChanges;
+  bool failedLow;
+  double bestMoveChanges, previousTimeReduction;
   Value previousScore;
   int callsCnt;
 };
